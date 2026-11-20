@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0e16">
+  <meta name="color-scheme" content="dark">
+  <!-- PWA: можно добавить на главный экран телефона. Все пути относительные — работает и на GitHub Pages -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Интернет">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Как устроен интернет — интерактивный учебник</title>
+  <meta name="description" content="Визуальный учебник: DNS, HTTP, TCP/IP, TLS, коммутаторы, роутеры, firewall, SSH и CI/CD на примере запроса к Claude API.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Набор иконок. Используются так: <svg><use href="#ic-laptop"/></svg> -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="ic-laptop" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/></symbol>
+    <symbol id="ic-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/></symbol>
+    <symbol id="ic-router" viewBox="0 0 24 24"><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 13V9M17 13V9M7 16.5h.01M10.5 16.5h.01"/><path d="M9 6.5a4.5 4.5 0 0 1 6 0M6.5 4a8 8 0 0 1 11 0"/></symbol>
+    <symbol id="ic-switch" viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10" rx="2"/><path d="M6 11v2M9 11v2M12 11v2M15 11v2M18 11v2"/></symbol>
+    <symbol id="ic-server" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="7" rx="1.5"/><rect x="4" y="14" width="16" height="7" rx="1.5"/><path d="M8 6.5h.01M8 17.5h.01M12 6.5h4M12 17.5h4"/></symbol>
+    <symbol id="ic-cloud" viewBox="0 0 24 24"><path d="M7 18.5a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 9a4.75 4.75 0 0 1-.5 9.5z"/></symbol>
+    <symbol id="ic-shield" viewBox="0 0 24 24"><path d="M12 3l7.5 3v6c0 4.6-3.2 7.7-7.5 9-4.3-1.3-7.5-4.4-7.5-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+    <symbol id="ic-wall" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 9.7h18M3 14.3h18M9 5v4.7M15 5v4.7M6 9.7v4.6M12 9.7v4.6M18 9.7v4.6M9 14.3V19M15 14.3V19"/></symbol>
+    <symbol id="ic-building" viewBox="0 0 24 24"><path d="M4 21V6l8-3 8 3v15"/><path d="M2.5 21h19M10 21v-4h4v4M8.5 8.5h.01M12 8.5h.01M15.5 8.5h.01M8.5 12.5h.01M12 12.5h.01M15.5 12.5h.01"/></symbol>
+    <symbol id="ic-book" viewBox="0 0 24 24"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19M9 7.5h6M9 11h4"/></symbol>
+    <symbol id="ic-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.4 3 14.6 0 18M12 3c-3 3.4-3 14.6 0 18"/></symbol>
+    <symbol id="ic-code" viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></symbol>
+    <symbol id="ic-printer" viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></symbol>
+    <symbol id="ic-terminal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12.5 15H17"/></symbol>
+    <symbol id="ic-game" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="11" rx="5.5"/><path d="M7 10.5v4M5 12.5h4M15.5 11.5h.01M18 13.5h.01"/></symbol>
+    <symbol id="ic-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="7" ry="2.5"/><path d="M5 5.5v13c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-13M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/></symbol>
+    <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></symbol>
+    <symbol id="ic-git" viewBox="0 0 24 24"><circle cx="6" cy="5.5" r="2"/><circle cx="6" cy="18.5" r="2"/><circle cx="18" cy="8.5" r="2"/><path d="M6 7.5v9M18 10.5c0 4-6.5 3-11 6.5"/></symbol>
+    <symbol id="ic-box" viewBox="0 0 24 24"><path d="M3 7.5l9-4.5 9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5l9 4.5 9-4.5M12 12v9"/></symbol>
+    <symbol id="ic-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6.5L4.8 18.3A1.8 1.8 0 0 0 6.4 21h11.2a1.8 1.8 0 0 0 1.6-2.7L14 9.5V3M7.5 15h9"/></symbol>
+    <symbol id="ic-rocket" viewBox="0 0 24 24"><path d="M5 15.5c-1.5 1.5-2 5-2 5s3.5-.5 5-2M9.5 14.5l-3-3c1.2-4.2 5.4-8.5 13-8.5 0 7.6-4.3 11.8-8.5 13z"/><circle cx="15" cy="9" r="1.6"/></symbol>
+    <symbol id="ic-wifi" viewBox="0 0 24 24"><path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01"/></symbol>
+    <symbol id="ic-cable" viewBox="0 0 24 24"><path d="M5 21v-4M3 17h4v-4H3zM19 21v-4M17 17h4v-4h-4zM5 13V9a7 7 0 0 1 14 0v4"/></symbol>
+    <symbol id="ic-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="ic-menu" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></symbol>
+    <symbol id="ic-note" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h6M9 16h6"/></symbol>
+    <symbol id="ic-bike" viewBox="0 0 24 24"><circle cx="5.5" cy="17" r="3.5"/><circle cx="18.5" cy="17" r="3.5"/><path d="M5.5 17l4-8h5l4 8M9.5 9L8 6H6M14.5 9l-3 8"/></symbol>
+    <symbol id="ic-chef" viewBox="0 0 24 24"><path d="M7 21h10M7 17h10v4H7zM7 17v-4.5A4 4 0 0 1 8 5a4 4 0 0 1 8 0 4 4 0 0 1 1 7.5V17"/></symbol>
+    <symbol id="ic-play" viewBox="0 0 24 24"><path d="M7 4.5l12 7.5-12 7.5z"/></symbol>
+    <symbol id="ic-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="ic-prev" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+    <symbol id="ic-next" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+    <symbol id="ic-restart" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5M3.5 3.5v5h5"/></symbol>
+    <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+    <symbol id="ic-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+    <symbol id="ic-burger" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="ic-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  </defs>
+</svg>
+
+<header class="topbar">
+  <div class="topbar-row">
+    <a class="brand" href="#start" aria-label="Как устроен интернет — к экрану «С чего начать»">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-globe"/></svg>
+      <span>Как устроен интернет</span>
+    </a>
+    <!-- Разделы: нажатие показывает экраны раздела во второй строке -->
+    <div id="nav-groups" class="nav-groups" aria-label="Разделы учебника"></div>
+    <span id="topbar-title" class="topbar-title" aria-hidden="true"></span>
+  </div>
+  <nav id="nav" class="nav" aria-label="Экраны раздела"></nav>
+</header>
+
+<main id="main">
+
+  <!-- 0. С чего начать -->
+  <section class="screen" id="screen-start" data-screen="start">
+    <div id="start-root"></div>
+  </section>
+
+  <!-- 1. Общая карта -->
+  <section class="screen" id="screen-map" data-screen="map">
+    <div class="map-layout">
+      <div class="panel stage-wrap"><svg id="map-svg" role="img" aria-label="Схема: дом, провайдер, интернет, сервер"></svg></div>
+      <aside class="panel info-card" id="map-card" aria-live="polite"></aside>
+    </div>
+    <div class="panel legend-panel" id="map-legend"></div>
+  </section>
+
+  <!-- 2. Путь одного запроса -->
+  <section class="screen" id="screen-request" data-screen="request">
+    <div class="panel stage-wrap">
+      <svg id="req-svg" role="img" aria-label="Анимация пути запроса"></svg>
+      <div id="req-controls"></div>
+    </div>
+    <div class="req-grid">
+      <div class="panel step-panel">
+        <div id="req-progress" class="progress" aria-label="Шаги"></div>
+        <div id="req-step" aria-live="polite"></div>
+      </div>
+      <div class="panel payload-panel">
+        <div id="req-payload"></div>
+        <div id="req-assembly"></div>
+      </div>
+    </div>
+    <div class="panel layerbar-panel">
+      <div class="small-title">Какие слои работают на этом шаге</div>
+      <div id="req-layers" class="layerbar"></div>
+    </div>
+  </section>
+
+  <!-- 3. Слои -->
+  <section class="screen" id="screen-layers" data-screen="layers">
+    <div class="layers-layout">
+      <div class="panel">
+        <div class="row-between">
+          <div class="small-title">Сообщение, которое уходит в провод (снаружи — внутрь)</div>
+          <div class="btn-row">
+            <button class="btn sm" type="button" id="layers-open">Развернуть все</button>
+            <button class="btn sm" type="button" id="layers-close">Свернуть все</button>
+          </div>
+        </div>
+        <div id="matryoshka" class="matryoshka"></div>
+      </div>
+      <div class="side-col">
+        <div class="panel">
+          <div class="small-title">Так это выглядит «в проводе» — подряд, байт за байтом</div>
+          <div id="wire" class="wire"></div>
+          <p class="hint">Нажми на кусок, чтобы раскрыть его слой. Ширина условная: на деле заголовки маленькие (десятки байт), а данные — до ~1460 байт в одном пакете.</p>
+        </div>
+        <div class="panel">
+          <div class="small-title">Кто какой слой читает</div>
+          <div id="readers"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. DNS -->
+  <section class="screen" id="screen-dns" data-screen="dns">
+    <div class="panel stage-wrap">
+      <div class="row-between wrap">
+        <div id="dns-picker" class="btn-row" aria-label="Выбери домен"></div>
+        <button class="btn sm ghost" type="button" id="dns-clear">Очистить кэш</button>
+      </div>
+      <svg id="dns-svg" role="img" aria-label="Анимация DNS-запроса"></svg>
+      <div id="dns-controls"></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel"><div class="small-title">Что происходит</div><ol id="dns-log" class="log-list"></ol></div>
+      <div class="panel">
+        <div class="small-title">Кэш резолвера</div>
+        <div id="dns-cache" class="cache"></div>
+        <div id="dns-analogy" class="analogy"></div>
+      </div>
+    </div>
+
+    <h3 class="section-title">Что если DNS глючит?</h3>
+    <p class="lead small" id="dns-trouble-lead"></p>
+    <div class="grid-2 compare">
+      <div class="panel"><div class="compare-title ok">DNS работает</div><div class="stage-wrap mini"><svg id="dns-ok"></svg></div><div class="status" id="dns-ok-status"></div></div>
+      <div class="panel"><div class="compare-title bad" id="dns-bad-title">DNS не работает</div><div class="stage-wrap mini"><svg id="dns-bad"></svg></div><div class="status" id="dns-bad-status"></div></div>
+    </div>
+    <div class="btn-row center">
+      <button class="btn primary" type="button" id="dns-compare-run">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-play"/></svg><span>Запустить сравнение</span>
+      </button>
+      <label class="toggle-label"><input type="checkbox" class="toggle" id="dns-fix"><span>Сменить сломанный DNS на 1.1.1.1</span></label>
+    </div>
+    <div class="grid-2">
+      <div class="panel" id="dns-symptoms"></div>
+      <div class="panel" id="dns-commands"></div>
+    </div>
+  </section>
+
+  <!-- 5. Железо -->
+  <section class="screen" id="screen-hardware" data-screen="hardware">
+    <div class="hw-layout">
+      <div class="panel stage-wrap">
+        <div id="hw-actions" class="btn-row"></div>
+        <svg id="hw-svg" role="img" aria-label="Домашняя сеть: коммутатор и роутер"></svg>
+        <div id="hw-caption" class="caption" aria-live="polite"></div>
+        <div id="hw-controls"></div>
+      </div>
+      <div class="side-col" id="hw-tables"></div>
+    </div>
+    <div class="panel">
+      <div class="small-title">Коммутатор vs маршрутизатор</div>
+      <div class="table-wrap"><table class="table" id="hw-compare"></table></div>
+    </div>
+    <div class="cards-3" id="hw-cards"></div>
+  </section>
+
+  <!-- 6. Firewall -->
+  <section class="screen" id="screen-firewall" data-screen="firewall">
+    <div class="fw-layout">
+      <div class="panel stage-wrap">
+        <div class="fw-counters" id="fw-counters"></div>
+        <svg id="fw-svg" role="img" aria-label="Поток пакетов через firewall"></svg>
+        <div id="fw-controls"></div>
+      </div>
+      <div class="side-col">
+        <div class="panel">
+          <div class="small-title">Правила (проверяются сверху вниз, срабатывает первое подходящее)</div>
+          <div id="fw-rules" class="rules"></div>
+        </div>
+        <div class="panel">
+          <div class="small-title">Журнал охранника</div>
+          <ol id="fw-log" class="log-list compact"></ol>
+        </div>
+      </div>
+    </div>
+    <div class="panel" id="fw-tips"></div>
+  </section>
+
+  <!-- 7. API vs HTTP vs JSON -->
+  <section class="screen" id="screen-api" data-screen="api">
+    <div class="cards-3" id="api-cards"></div>
+    <div class="panel restaurant" id="api-flow"></div>
+    <h3 class="section-title">Настоящий запрос к Messages API — что где</h3>
+    <div class="btn-row" id="api-filters"></div>
+    <div class="api-layout">
+      <div class="panel"><div class="small-title">Запрос (что ты отправляешь)</div><pre class="code annotated" id="api-req"></pre></div>
+      <div class="panel"><div class="small-title">Ответ (что возвращает сервер)</div><pre class="code annotated" id="api-res"></pre></div>
+      <aside class="panel explain" id="api-explain" aria-live="polite"></aside>
+    </div>
+    <div class="grid-2">
+      <div class="panel"><div class="small-title">То же самое в коде (Python SDK)</div><pre class="code" id="api-sdk"></pre></div>
+      <div class="panel"><div class="small-title">Коды ответа, которые стоит знать</div><div class="table-wrap"><table class="table" id="api-status"></table></div></div>
+    </div>
+  </section>
+
+  <!-- 8. SSH и CI/CD -->
+  <section class="screen" id="screen-ssh" data-screen="ssh">
+    <h3 class="section-title first">SSH — зашифрованный удалённый терминал</h3>
+    <div class="ssh-layout">
+      <div class="panel">
+        <div class="stage-wrap mini"><svg id="ssh-svg" role="img" aria-label="SSH-туннель"></svg></div>
+        <div class="visibility" id="ssh-vis"></div>
+        <div class="btn-row" id="ssh-cmds"></div>
+      </div>
+      <div class="panel term-panel">
+        <div class="term"><div class="term-bar"><span></span><span></span><span></span><b>Терминал</b></div><div class="term-body" id="ssh-term"></div></div>
+      </div>
+    </div>
+    <p class="lead small" id="ssh-note"></p>
+
+    <h3 class="section-title">CI/CD — конвейер от git push до сервера</h3>
+    <div class="panel">
+      <div class="pipeline" id="cicd-pipe"></div>
+      <div class="row-between wrap cicd-actions">
+        <div class="btn-row">
+          <button class="btn primary" type="button" id="cicd-run"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-git"/></svg><span>git push</span></button>
+          <label class="toggle-label"><input type="checkbox" class="toggle" id="cicd-fail"><span>Сломать тест</span></label>
+        </div>
+        <div id="cicd-controls"></div>
+      </div>
+      <div class="cicd-bottom">
+        <pre class="code log" id="cicd-log" aria-live="polite"></pre>
+        <div class="status" id="cicd-result"></div>
+      </div>
+    </div>
+    <p class="lead small" id="cicd-note"></p>
+  </section>
+
+  <!-- 10. Модели OSI и TCP/IP -->
+  <section class="screen" id="screen-osi" data-screen="osi">
+    <div class="osi-layout">
+      <div class="panel">
+        <div class="osi-cols" aria-hidden="true"><span>OSI · 7 уровней</span><span></span><span>TCP/IP · 4 уровня</span></div>
+        <div id="osi-grid" class="osi-grid"></div>
+        <div class="small-title" style="margin-top:16px">Как сообщение проходит уровни</div>
+        <div id="osi-run" class="btn-row"></div>
+        <div id="osi-pdu" class="pdu" aria-live="polite"></div>
+        <div id="osi-controls"></div>
+      </div>
+      <aside class="panel info-card" id="osi-card" aria-live="polite"></aside>
+    </div>
+    <div class="panel lnums-panel" id="osi-lnums"></div>
+    <div class="panel" id="osi-facts"></div>
+  </section>
+
+  <!-- 11. Адреса: MAC, IP, порты -->
+  <section class="screen" id="screen-addr" data-screen="addr">
+    <div class="panel stage-wrap">
+      <svg id="addr-svg" role="img" aria-label="Путь пакета от ноутбука до сервера"></svg>
+      <div id="addr-controls"></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel step-panel">
+        <div id="addr-progress" class="progress" aria-label="Шаги"></div>
+        <div id="addr-step" aria-live="polite"></div>
+      </div>
+      <div class="panel">
+        <div class="small-title">Что написано на пакете сейчас</div>
+        <div id="addr-env"></div>
+        <div class="small-title" style="margin-top:14px">Кто слушает порты на сервере 203.0.113.80</div>
+        <div id="addr-ports" class="ports"></div>
+      </div>
+    </div>
+    <div class="cards-3" id="addr-cards"></div>
+    <h3 class="section-title">NAT подробно: один адрес на весь дом</h3>
+    <div class="panel" id="addr-nat"></div>
+    <h3 class="section-title">DHCP: откуда у телефона адрес</h3>
+    <div class="panel" id="addr-dhcp"></div>
+  </section>
+
+  <!-- 12. TCP против UDP -->
+  <section class="screen" id="screen-tcpudp" data-screen="tcpudp">
+    <div class="panel" id="tu-toolbar"></div>
+    <div class="grid-2">
+      <div class="panel lane" id="tu-tcp"></div>
+      <div class="panel lane" id="tu-udp"></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel" id="tu-uses"></div>
+      <div class="panel"><div class="small-title">Сравнение</div><div id="tu-compare"></div></div>
+    </div>
+    <p class="lead small" id="tu-note"></p>
+  </section>
+
+  <!-- 13. HTTP, TLS и VPN -->
+  <section class="screen" id="screen-web" data-screen="web">
+    <div class="tabs" id="web-tabs" role="tablist" aria-label="Тема"></div>
+    <div class="tab-panel" id="web-http" role="tabpanel"></div>
+    <div class="tab-panel" id="web-tls" role="tabpanel" hidden></div>
+    <div class="tab-panel" id="web-vpn" role="tabpanel" hidden></div>
+  </section>
+
+  <!-- 14. Что происходит, когда вводишь адрес сайта -->
+  <section class="screen" id="screen-url" data-screen="url">
+    <div class="url-top">
+      <div class="panel browser-panel"><div id="url-browser"></div></div>
+      <div class="panel stage-wrap">
+        <svg id="url-svg" role="img" aria-label="Сеть: браузер, роутер, DNS, сервер"></svg>
+        <div id="url-controls"></div>
+      </div>
+    </div>
+    <div class="req-grid">
+      <div class="panel step-panel">
+        <div id="url-progress" class="progress" aria-label="Шаги"></div>
+        <div id="url-step" aria-live="polite"></div>
+      </div>
+      <div class="panel payload-panel"><div id="url-payload"></div></div>
+    </div>
+    <div class="panel layerbar-panel">
+      <div class="small-title">Какие уровни работают на этом шаге (номера — как на экране «OSI и TCP/IP»)</div>
+      <div id="url-layers" class="layerbar"></div>
+    </div>
+  </section>
+
+  <!-- 15. Потрогай сам -->
+  <section class="screen" id="screen-terminal" data-screen="terminal">
+    <div class="panel stage-wrap">
+      <div class="small-title">Что происходит в сети</div>
+      <svg id="term-svg" role="img" aria-label="Путь пакетов команды"></svg>
+      <div id="term-caption" class="caption" aria-live="polite"></div>
+      <div id="term-controls"></div>
+    </div>
+    <div class="term-layout">
+      <div class="panel term-panel">
+        <div class="term-tools">
+          <div id="term-os" class="btn-row" role="group" aria-label="Операционная система"></div>
+          <div id="term-cmds" class="btn-row"></div>
+        </div>
+        <div class="term">
+          <div class="term-bar"><span></span><span></span><span></span><b id="term-title">Командная строка</b></div>
+          <div class="term-body" id="term-body"></div>
+          <form class="term-input" id="term-form" autocomplete="off">
+            <span id="term-prompt" class="p-local"></span>
+            <input id="term-in" type="text" spellcheck="false" aria-label="Команда" placeholder="или напиши: ping example.com">
+          </form>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="small-title">Разбор вывода по строкам</div>
+        <div id="term-explain" class="explain-list"></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="panel" id="term-howto"></div>
+      <div class="panel" id="term-warn"></div>
+    </div>
+  </section>
+
+  <!-- 16. Диагностика -->
+  <section class="screen" id="screen-diag" data-screen="diag">
+    <div class="panel stage-wrap"><svg id="diag-svg" role="img" aria-label="Цепочка от компьютера до сервера"></svg></div>
+    <div class="diag-layout">
+      <div class="panel">
+        <div class="small-title">Порядок проверки</div>
+        <ol id="diag-tree" class="diag-tree"></ol>
+        <button class="btn sm ghost" type="button" id="diag-reset" style="margin-top:12px">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-restart"/></svg><span>Начать заново</span>
+        </button>
+      </div>
+      <div class="panel diag-card" id="diag-card" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- 9. Глоссарий -->
+  <section class="screen" id="screen-glossary" data-screen="glossary">
+    <div class="panel gloss-tools">
+      <label class="search">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-search"/></svg>
+        <input type="search" id="gloss-q" placeholder="Поиск: например, порт, NAT, ключ…" autocomplete="off">
+      </label>
+      <div id="gloss-filters" class="btn-row"></div>
+      <div class="hint" id="gloss-count"></div>
+    </div>
+    <div id="gloss-list" class="gloss-list"></div>
+  </section>
+
+</main>
+
+<!-- Панель с объяснением термина: справа на компьютере, снизу на телефоне -->
+<dialog id="term-panel" class="tpanel" aria-labelledby="tp-title">
+  <div class="tp-inner">
+    <div class="tp-head">
+      <div class="tp-grip" aria-hidden="true"></div>
+      <div class="tp-tools">
+        <button type="button" class="btn sm ghost" id="tp-back" hidden>
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-prev"/></svg>Назад: <span></span>
+        </button>
+        <div class="tp-mode" id="tp-mode" role="group" aria-label="Режим объяснения">
+          <button type="button" data-mode="simple" aria-pressed="false">Просто</button>
+          <button type="button" data-mode="full" aria-pressed="true">Подробно</button>
+        </div>
+        <button type="button" class="tp-close" id="tp-close" aria-label="Закрыть объяснение">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-x"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="tp-body" id="tp-body"></div>
+  </div>
+</dialog>
+
+<!-- Меню экранов на телефоне -->
+<dialog id="menu-sheet" class="tpanel menu-sheet" aria-label="Все экраны">
+  <div class="tp-inner">
+    <div class="tp-head">
+      <div class="tp-grip" aria-hidden="true"></div>
+      <div class="tp-tools">
+        <b class="menu-title">Экраны учебника</b>
+        <button type="button" class="tp-close" id="menu-close" aria-label="Закрыть меню">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-x"/></svg>
+        </button>
+      </div>
+    </div>
+    <nav class="tp-body" id="menu-list" aria-label="Все экраны"></nav>
+  </div>
+</dialog>
+
+<!-- Нижняя панель навигации на телефоне -->
+<nav class="bottom-nav" id="bottom-nav" aria-label="Навигация по экранам"></nav>
+
+<div id="tooltip" class="tooltip" role="tooltip"></div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
