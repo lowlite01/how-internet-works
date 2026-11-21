@@ -205,7 +205,7 @@ class Clock {
 
 /* ---------- 3. Stage: SVG-сцена ----------
    cfg: { nodes, links, zones, size: { wide: [w,h], tall: [w,h] },
-          breakpoint, onNodeClick, onNodeHover, onRender }
+          breakpoint, onNodeClick, onRender, hoverTips — подпись с названием при наведении }
    Если контейнер уже breakpoint и есть раскладка tall — схема
    перерисовывается вертикально (для телефона). */
 class Stage {
@@ -285,10 +285,7 @@ class Stage {
         const hit = sv('line', { class: 'link-hit', x1: a.x, y1: a.y, x2: b.x, y2: b.y, tabindex: 0, role: 'button', 'aria-label': l.title });
         hit.addEventListener('click', () => this.cfg.onNodeClick(l.id));
         hit.addEventListener('keydown', e => { if (e.key === 'Enter') this.cfg.onNodeClick(l.id); });
-        if (this.cfg.onNodeHover) {
-          hit.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') this.cfg.onNodeHover(l.id); });
-          hit.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') this.cfg.onNodeHover(null); });
-        }
+        if (this.cfg.hoverTips) hit.setAttribute('data-tip', l.title);
         this.gLinks.append(hit);
       }
     }
@@ -307,7 +304,7 @@ class Stage {
     const g = sv('g', {
       class: 'node' + (clickable ? ' clickable' : ''), 'data-id': id,
       transform: `translate(${p.x} ${p.y})`, style: `--c: var(--l-${n.layer || 'hw'})`, 'data-layer': n.layer || 'hw',
-      'data-tip': (!this.cfg.onNodeHover && n.tip) ? n.tip : null,
+      'data-tip': this.cfg.hoverTips ? (n.title || n.label) : (n.tip || null),
     });
     g.append(
       sv('circle', { class: 'halo', r: R }),
@@ -325,11 +322,6 @@ class Stage {
       g.setAttribute('aria-label', n.title || n.label);
       g.addEventListener('click', () => this.cfg.onNodeClick(id));
       g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.cfg.onNodeClick(id); } });
-    }
-    if (this.cfg.onNodeHover) {
-      // Только мышь: касание на телефоне не должно считаться «наведением»
-      g.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') this.cfg.onNodeHover(id); });
-      g.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') this.cfg.onNodeHover(null); });
     }
     this.nodeEls[id] = g;
     return g;
@@ -504,12 +496,9 @@ const MapScreen = {
     this.stage = new Stage($('#map-svg', root), this.clock, {
       nodes: MAP.nodes, links: MAP.links, zones: MAP.zones, size: MAP.size, breakpoint: 560,
       onNodeClick: id => this.pin(id),
-      onNodeHover: id => this.show(id || this.pinned),
+      hoverTips: true,  // наведение не меняет карточку: только подсветка узла и подпись с названием
     });
     this.show(null);
-    $('#map-legend', root).append(
-      h('div', { class: 'small-title', text: 'Цвета слоёв — одинаковые на всех экранах (наведи, чтобы прочитать)' }),
-      h('div', { class: 'legend' }, [...LAYER_STACK, 'dns', 'sec', 'ssh', 'cicd', 'api'].map(k => chip(k, LAYERS[k].name))));
     if (!REDUCED_MOTION) this.ambient();
   },
   find(id) { return MAP.nodes[id] || MAP.links.find(l => l.id === id); },
@@ -528,7 +517,7 @@ const MapScreen = {
       this.card.style.removeProperty('--c');
       put(this.card, h('div', { class: 'card-empty' },
         h('h3', { text: 'Нажми на любой элемент схемы' }),
-        h('p', { text: 'Каждый узел и линии с подписями кликабельны: нажатие открывает и закрепляет карточку (на компьютере можно просто навести курсор). Как читать карту:' }),
+        h('p', { text: 'Каждый узел и каждая линия с подписью кликабельны: нажатие закрепляет карточку, повторное нажатие — снимает. Как читать карту:' }),
         h('ul', {}, MAP.intro.map(t => h('li', { text: t })))));
       return;
     }
@@ -2741,7 +2730,7 @@ const TermLinker = {
   SKIP: 'pre, code, button, a, svg, input, textarea, select, label, h1, h2, h3, h4, .chip, .term-exp, .proto, .term-body, '
     + '.br-doc, .nav, .topbar, .tooltip, .layer-cell, .pdu, .env-v, .vis-row, .cache, .log-list.compact, .eyebrow, .small-title, '
     + '.payload-title, .step-num, .slot, .counter, .wire, .mini-bar, .legend-bar, .tp-title, .tp-layer, .no-terms, .port-badge, .proto-ru, .proto-full, .hash-out, .pdu-row',
-  NO_EXP: 'td, th, .status, .lane-caption, .lane-delivered, .hint-inline, .caption, .hint, .tp-body, .proto-card, .sec-card, .log-list',
+  NO_EXP: 'td, th, .status, .lane-caption, .lane-delivered, .hint-inline, .caption, .hint, .tp-body, .proto-card, .sec-card, .log-list, .num-row, .letter',
   init() {
     this.keyOf = new Map();
     for (const [key, t] of Object.entries(TERMS)) for (const m of (t.match || [t.abbr])) this.keyOf.set(m, key);
@@ -2999,10 +2988,13 @@ const Highlight = {
 };
 
 const LEGEND_KEYS = ['app', 'http', 'tls', 'tcp', 'ip', 'link', 'dns', 'sec', 'ssh', 'cicd', 'api', 'hw'];
-function legendBar() {
+function legendBar(id) {
+  const caption = id === 'protocols'
+    ? 'Цвета показывают слои. Нажми на цвет, чтобы подсветить только протоколы этого слоя.'
+    : 'Цвета показывают слои. Нажми на цвет, чтобы подсветить на схеме только пакеты и узлы этого слоя.';
   return h('div', { class: 'legend-bar' },
+    h('p', { class: 'legend-caption', text: caption }),
     h('div', { class: 'legend-row', role: 'group', 'aria-label': 'Подсветить слой на схеме' },
-      h('span', { class: 'legend-label', text: 'Подсветить слой:' }),
       h('div', { class: 'legend-scroll' }, LEGEND_KEYS.map(k => h('button', {
         type: 'button', class: 'chip legend-btn', style: `--c: var(--l-${k})`, 'data-layer': k, 'aria-pressed': 'false',
         'data-tip': LAYERS[k].desc, onclick: () => Highlight.toggle(k),
@@ -3384,10 +3376,266 @@ async function hashText(text) {
 }
 
 /* =====================================================================
+   ЭКРАН «ЧТО ВНУТРИ ЗАПРОСА»
+   Пошаговый разбор одного запроса. Справа — «Анатомия пакета»: матрёшка
+   из слоёв, которая растёт по шагам, меняется на узлах пути и
+   разбирается на сервере. Вкладки переключают пример: браузер → YouTube
+   или программа → API погоды (маршрут и слои те же, меняется «суть»).
+   ===================================================================== */
+const InsideScreen = {
+  init(root) {
+    this.clock = new Clock();
+    this.clocks = [this.clock];
+    this.scn = 'web';
+    this.cached = false;  // «Уже заходил» — IP-адрес есть в кэше
+    this.stage = new Stage($('#in-svg', root), this.clock, { nodes: INSIDE.nodes, links: INSIDE.links, size: INSIDE.size, breakpoint: 560 });
+
+    this.tabBtns = Object.entries(INSIDE.scenarios).map(([id, S]) => h('button', {
+      class: 'tab', type: 'button', role: 'tab', 'aria-selected': 'false', 'data-scn': id,
+      style: `--c: var(--l-${id === 'api' ? 'api' : 'http'})`, onclick: () => this.setScenario(id),
+    }, S.tab));
+    $('#in-tabs', root).append(...this.tabBtns);
+
+    this.dnsBtns = [[false, 'Первый раз'], [true, 'Уже заходил']].map(([v, label]) => h('button', {
+      class: 'btn sm', type: 'button', 'aria-pressed': 'false', 'data-cached': String(v), onclick: () => this.setCached(v),
+    }, label));
+    $('#in-dns', root).append(h('span', { class: 'hint-inline', text: 'Адрес сервера:' }), ...this.dnsBtns);
+
+    this.steps = this.buildSteps();
+    this.stepper = new Stepper({
+      id: 'inside', clock: this.clock, steps: this.steps, stages: [this.stage],
+      progressEl: $('#in-progress', root), controlsEl: $('#in-controls', root),
+      render: (st, i) => this.render(st, i),
+      play: (st, i) => this.play(st, i),
+    });
+    this.stepper.ctrl.play.classList.add('pulse-hint');
+    this.stepper.ctrl.play.addEventListener('click', () => this.stepper.ctrl.play.classList.remove('pulse-hint'));
+    this.markTabs();
+    this.markDns();
+    this.renderExtras();
+    this.stepper.show(0);
+  },
+
+  S() { return INSIDE.scenarios[this.scn]; },
+  buildSteps() {
+    const S = this.S();
+    const vars = { host: S.host, ip: S.ip, thing: S.thing, who: S.who, start: S.start, action: S.action, serverWork: S.serverWork, back: S.back };
+    return INSIDE.steps.map(st => ({ ...st, title: tpl(st.title, vars), text: st.text.map(t => tpl(t, vars)) }));
+  },
+  markTabs() {
+    this.tabBtns.forEach(b => { const on = b.dataset.scn === this.scn; b.classList.toggle('selected', on); b.setAttribute('aria-selected', String(on)); });
+  },
+  markDns() {
+    this.dnsBtns.forEach(b => { const on = b.dataset.cached === String(this.cached); b.classList.toggle('selected', on); b.setAttribute('aria-pressed', String(on)); });
+    $$('#in-step .fork-b').forEach(el => el.classList.toggle('on', el.dataset.cached === String(this.cached)));
+  },
+  setScenario(id) {
+    if (id === this.scn) return;
+    this.scn = id;
+    const S = this.S();
+    this.markTabs();
+    this.stage.setLabel('srv', { label: S.server, sub: S.ip });
+    this.steps.splice(0, this.steps.length, ...this.buildSteps());  // те же шаги, тексты нового примера
+    this.stepper.dots.forEach((d, k) => { d.dataset.tip = this.steps[k].title; d.setAttribute('aria-label', `Шаг ${k + 1}: ${this.steps[k].title}`); });
+    this.renderExtras();
+    this.stepper.setAuto(false);
+    this.stepper.show(0);
+  },
+  setCached(v) {
+    this.cached = v;
+    this.markDns();
+    // Если сейчас открыт шаг с развилкой — переиграть его с новым вариантом
+    if (this.steps[this.stepper.idx].id === 'dns') this.stepper.show(this.stepper.idx);
+  },
+
+  /* --- Анатомия пакета: матрёшка из слоёв ---
+     state: { layers — какие слои есть, res — это ответ, fields — подписи слоёв,
+              flash — какие слои подсветить как «изменённые» } */
+  defaultFields(res) {
+    const S = this.S();
+    return {
+      core: res ? S.coreRes : S.coreReq,
+      tls: '🔒 всё внутри зашифровано',
+      tcp: res ? 'порт 443 → 51234, кусок с номером' : 'порт 51234 → 443, куски 1, 2, 3',
+      ip: res ? `IP: ${S.ip} → 198.51.100.23` : `IP: 192.168.1.10 → ${S.ip}`,
+      link: res ? 'MAC: сервер → дата-центр' : 'MAC: ноутбук → роутер',
+    };
+  },
+  renderDoll(state) {
+    const S = this.S();
+    const prev = this.dollShown || [];
+    const fields = { ...this.defaultFields(state.res), ...(state.fields || {}) };
+    let inner = null;
+    // Строим изнутри наружу: суть запроса → TLS → TCP → IP → кадр
+    for (const [k, name, term] of [...INSIDE.doll].reverse()) {
+      if (!state.layers.includes(k)) continue;
+      const color = k === 'core' ? (state.res ? S.resLayer : S.coreLayer) : k;
+      const termKey = k === 'core' ? (state.res ? S.resTerm : 'http') : term;
+      const cls = 'doll-layer' + (prev.includes(k) ? '' : ' doll-new') + (state.flash?.includes(k) ? ' doll-flash' : '');
+      inner = h('div', { class: cls, style: `--c: var(--l-${color})`, 'data-layer': color },
+        h('button', { type: 'button', class: 'doll-head', 'aria-label': `${name} — открыть объяснение`, onclick: e => TermPanel.open(termKey, e.currentTarget) },
+          h('b', { text: name }), h('span', { text: fields[k] })),
+        inner);
+    }
+    put($('#in-doll'), inner || h('div', { class: 'doll-empty', text: 'Все обёртки сняты.' }));
+    this.dollShown = [...state.layers];
+  },
+
+  render(st, i) {
+    const S = this.S();
+    this.stage.setMark('active', st.focus || []);
+    this.stage.setMark('dim', []);
+    this.stage.setMark('good', []);
+    this.dollShown = st.layers.filter(k => (INSIDE.steps[i - 1]?.layers || []).includes(k));  // анимировать только новые слои
+    this.renderDoll({ layers: st.layers, res: !!st.response });
+    $('#in-hop').textContent = '';
+    put($('#in-step'),
+      h('div', { class: 'step-num', text: `Шаг ${i + 1} из ${this.steps.length}` }),
+      h('h3', { text: st.title }),
+      paragraphs(st.text),
+      st.id === 'dns' ? this.fork() : null);
+    this.markDns();
+    put($('#in-payload'), this.payload(st));
+  },
+  // Развилка «Знаем IP-адрес?»: две ветки, активная подсвечена; нажатие выбирает вариант
+  fork() {
+    const S = this.S();
+    const branch = (cached, title, text) => h('button', { type: 'button', class: 'fork-b', 'data-cached': String(cached), onclick: () => this.setCached(cached) },
+      h('b', { text: title }), h('span', { text }));
+    return h('div', { class: 'fork' },
+      h('div', { class: 'fork-q', text: `Знаем IP-адрес ${S.host}?` }),
+      h('div', { class: 'fork-branches' },
+        branch(true, 'Да — уже заходил', 'Адрес в кэше браузера, системы или роутера. DNS пропускаем — короткий путь.'),
+        branch(false, 'Нет — первый раз', 'Спрашиваем DNS-сервер. Этот вопрос — тоже пакет, он идёт по сети.')));
+  },
+  payload(st) {
+    const S = this.S();
+    const title = text => h('div', { class: 'payload-title', text });
+    const code = (text, lang = 'shell') => h('pre', { class: 'code', html: highlight(text, lang) });
+    switch (st.id) {
+      case 'click': return [title('Запрос как письмо'),
+        h('div', { class: 'letter' },
+          S.letter.map(([k, human, raw]) => h('div', { class: 'letter-row' }, h('b', { text: k }), h('span', { text: human }), h('code', { text: raw }))),
+          h('div', { class: 'letter-stamp', text: 'Это ещё не отправлено, это только текст запроса' })),
+        title('То же самое в виде HTTP'), code(S.request, 'http')];
+      case 'dns': return this.cached
+        ? [title('Адрес из кэша'), code(`# Кэш браузера / системы / роутера\n${S.host}  →  ${S.ip}   (хранится ещё 4 мин)\n\n# DNS-запрос не нужен — сразу к серверу`)]
+        : [title('DNS-запрос и ответ (тоже пакеты, UDP, порт 53)'), code(`→ ${S.host}  A ?\n← ${S.host}  A  ${S.ip}   TTL 300\n\n# Ответ сохраняется в кэш: в следующий раз DNS не понадобится`)];
+      case 'tls': return [title('Было → стало'), code(S.request.split('\n')[0] + '\n…', 'http'), code('🔒 ' + fakeCipher(S.request, 24) + ' …')];
+      case 'tcp': return [title('Запрос порезан на куски'), code([1, 2, 3].map(n => `Пакет ${n} из 3:  порт 51234 → 443,  номер ${(n - 1) * 1460 + 1}\n           🔒 ${fakeCipher(S.request + n, 10)} …`).join('\n'))];
+      case 'ip': return [title('На каждом куске — адреса'), code(`IP: от 192.168.1.10 (ноутбук)\n    кому ${S.ip} (${S.server.toLowerCase()})\n    TTL 64 — сколько прыжков ещё можно\n    внутри: TCP (протокол 6)`)];
+      case 'frame': return [title('Внешняя обёртка — Wi-Fi-кадр'), code('Wi-Fi-кадр:\n  MAC от:   3c:7d:0a:44:55:66 (ноутбук)\n  MAC кому: a4:2b:b0:11:22:33 (роутер — ближайший сосед)\n  внутри:   IP-пакет\n  в конце:  CRC — проверка, что кадр не побился')];
+      case 'path': return [title('Кто что читает по пути'), h('ol', { class: 'log-list hop-log', id: 'in-hoplog' }, h('li', { class: 'hint', text: 'Пакеты в пути…' }))];
+      case 'server': return [title('Сервер снимает обёртки'), h('ol', { class: 'log-list hop-log', id: 'in-unwrap' })];
+      case 'back': return [title('Ответ сервера'), code(S.response, 'http')];
+      default: return null;
+    }
+  },
+
+  async play(st) {
+    const c = this.clock, stg = this.stage, S = this.S();
+    const say = t => { $('#in-hop').textContent = t; };
+    if (st.id === 'click') { stg.pulse('laptop'); say(`${S.who[0].toUpperCase() + S.who.slice(1)} собирает текст запроса. В сеть ещё ничего не ушло.`); await c.wait(0.8); return; }
+
+    if (st.id === 'dns') {
+      if (this.cached) {
+        stg.setMark('dim', ['dns']);
+        stg.setMark('good', ['laptop']);
+        say(`Короткий путь: адрес ${S.host} → ${S.ip} уже лежит в кэше. DNS-сервер не нужен.`);
+        await stg.fly(['laptop', 'router'], { layer: 'ip', label: 'IP ✓', speed: 160 });
+        await c.wait(0.6);
+      } else {
+        say(`Ноутбук спрашивает DNS-сервер: «какой IP у ${S.host}?» Вопрос — это тоже пакет.`);
+        await stg.fly(['laptop', 'router', 'isp', 'dns'], { layer: 'dns', label: 'DNS?', speed: 260 });
+        say(`DNS отвечает: ${S.ip}. Ноутбук запоминает ответ в кэше.`);
+        await stg.fly(['dns', 'isp', 'router', 'laptop'], { layer: 'dns', label: 'IP', speed: 260 });
+      }
+      return;
+    }
+
+    if (['tls', 'tcp', 'ip', 'frame'].includes(st.id)) {
+      stg.pulse('laptop');
+      const what = { tls: 'Добавлен слой TLS: запрос зашифрован.', tcp: 'Добавлен слой TCP: куски с номерами и порт 443.', ip: 'Добавлен слой IP: адреса отправителя и получателя.', frame: 'Добавлен Wi-Fi-кадр: MAC-адрес роутера. Пакет готов к отправке.' }[st.id];
+      say(what);
+      await c.wait(1);
+      return;
+    }
+
+    if (st.id === 'path') {
+      const log = $('#in-hoplog');
+      let fields = {};
+      for (const hop of INSIDE.hops) {
+        stg.setMark('active', [hop.node]);
+        // Три пакета летят друг за другом
+        await Promise.all([0, 0.3, 0.6].map(async (d, n) => { await c.wait(d); await stg.fly(hop.route, { layer: 'ip', label: String(n + 1), speed: 220 }); }));
+        fields = { ...fields, ...Object.fromEntries(Object.entries(hop.fields || {}).map(([k, v]) => [k, tpl(v, { ip: S.ip })])) };
+        this.renderDoll({ layers: st.layers, fields, flash: hop.change });
+        const name = INSIDE.nodes[hop.node].label === 'Сервер YouTube' ? S.server : INSIDE.nodes[hop.node].label;
+        say(`${name}: ${hop.reads}`);
+        if (log.firstChild?.classList.contains('hint')) put(log);
+        log.append(h('li', {}, h('b', { text: name + '. ' }), hop.reads + ' ' + hop.does));
+        await c.wait(2.6);
+      }
+      stg.setMark('good', ['srv']);
+      return;
+    }
+
+    if (st.id === 'server') {
+      const log = $('#in-unwrap');
+      let layers = [...st.layers];
+      for (const [k, text] of INSIDE.unwrap) {
+        await c.wait(1.1);
+        layers = layers.filter(x => x !== k);
+        this.renderDoll({ layers });
+        say(text);
+        log.append(h('li', { text }));
+      }
+      await c.wait(1.1);
+      say('Сервер читает сам запрос: ' + S.coreReq.replace('HTTP: ', ''));
+      log.append(h('li', { text: 'Виден сам запрос: ' + S.coreReq.replace('HTTP: ', '') }));
+      await c.wait(1.4);
+      this.dollShown = [];
+      this.renderDoll({ layers: ['core'], res: true });
+      say('Ответ готов: ' + S.coreRes + '. Сейчас его так же завернут во все слои.');
+      log.append(h('li', { text: S.serverWork }));
+      return;
+    }
+
+    if (st.id === 'back') {
+      const route = ['srv', 'inet', 'isp', 'router', 'laptop'];
+      const many = this.scn === 'web' ? 6 : 1;
+      say(many > 1 ? 'Ответ идёт обратно: страница и видео — потоком пакетов.' : 'Ответ идёт обратно: JSON помещается в один пакет.');
+      await Promise.all(Array.from({ length: many }, async (_, n) => { await c.wait(n * 0.3); await stg.fly(route, { layer: 'http', label: String(n + 1), speed: 260 }); }));
+      stg.setMark('good', ['laptop']);
+      say(many > 1 ? 'Браузер собирает куски по номерам и показывает видео, а следующие куски уже летят.' : 'Программа получила JSON и читает поля: город, температуру, ветер.');
+    }
+  },
+
+  /* --- Блоки под анимацией: «в числах» и сравнение браузер ↔ API --- */
+  renderExtras() {
+    const S = this.S();
+    const rows = list => h('div', { class: 'num-rows' }, list.map(([codeText, layer, what]) => h('div', { class: 'num-row', 'data-layer': layer },
+      h('code', { text: codeText }), chip(layer, LAYERS[layer].short), h('span', { text: what }))));
+    put($('#in-numbers'),
+      h('div', { class: 'panel' }, h('div', { class: 'small-title', text: 'Запрос: что ушло на сервер' }), rows(S.numbers.req)),
+      h('div', { class: 'panel' }, h('div', { class: 'small-title', text: 'Ответ: что пришло обратно' }), rows(S.numbers.res)));
+    const C = INSIDE.compare;
+    const other = this.scn === 'web' ? 'api' : 'web';
+    put($('#in-compare'), h('div', { class: 'panel in-compare' },
+      h('div', { class: 'small-title', text: 'А если запрос идёт из программы, а не из браузера?' }),
+      h('div', { class: 'formula' }, C.formula.map(t => h('p', { text: t }))),
+      makeTable(['', 'Браузер → сайт', 'Программа → API'], C.rows.map(([k, a, b]) => h('tr', {}, h('th', { text: k }), h('td', { text: a }), h('td', { text: b })))),
+      h('div', { class: 'btn-row', style: 'margin-top:12px' },
+        h('button', { class: 'btn primary', type: 'button', onclick: () => { this.setScenario(other); $('#in-tabs').scrollIntoView({ behavior: REDUCED_MOTION ? 'auto' : 'smooth', block: 'start' }); } },
+          icon('play'), other === 'api' ? 'Пройти тот же путь с запросом к API погоды' : 'Вернуться к примеру с YouTube'))));
+  },
+};
+
+/* =====================================================================
    5. НАВИГАЦИЯ И ГЛАВНЫЙ ЦИКЛ
    ===================================================================== */
 const SCREEN_IMPL = {
-  start: StartScreen, map: MapScreen, request: RequestScreen, layers: LayersScreen, api: ApiScreen,
+  start: StartScreen, map: MapScreen, inside: InsideScreen, request: RequestScreen, layers: LayersScreen, api: ApiScreen,
   osi: OsiScreen, addr: AddrScreen, hardware: HardwareScreen, tcpudp: TcpUdpScreen, dns: DnsScreen,
   firewall: FirewallScreen, web: WebScreen,
   url: UrlScreen, ssh: SshScreen, terminal: TerminalScreen, diag: DiagScreen,
@@ -3424,7 +3672,7 @@ function buildHeadAndFoot(id) {
     h('div', { class: 'eyebrow', text: i === 0 ? 'Начало' : `${group.title} · экран ${i} из ${SCREENS.length - 1}` }),
     h('h2', { text: sc.title }),
     h('p', { class: 'lead', text: sc.lead }),
-    LEGEND_SCREENS.has(id) ? legendBar() : null));
+    LEGEND_SCREENS.has(id) ? legendBar(id) : null));
   const prev = SCREENS[i - 1], next = SCREENS[i + 1];
   sec.append(h('footer', { class: 'screen-foot' },
     prev ? h('a', { class: 'btn ghost', href: '#' + prev.id }, icon('prev'), prev.title) : h('span'),
@@ -3460,7 +3708,7 @@ function go(id) {
   window.scrollTo(0, 0);
 }
 // Экраны, где есть схема или цветные слои — у них вверху кликабельная легенда
-const LEGEND_SCREENS = new Set(['map', 'request', 'layers', 'osi', 'addr', 'hardware', 'tcpudp', 'dns', 'firewall', 'web', 'url', 'ssh', 'terminal', 'diag', 'protocols', 'security']);
+const LEGEND_SCREENS = new Set(['map', 'inside', 'request', 'layers', 'osi', 'addr', 'hardware', 'tcpudp', 'dns', 'firewall', 'web', 'url', 'ssh', 'terminal', 'diag', 'protocols', 'security']);
 
 function boot() {
   // Цвета слоёв из data.js → CSS-переменные --l-*

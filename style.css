@@ -336,7 +336,7 @@ svg.stage { display: block; width: 100%; height: auto; overflow: visible; user-s
 .hw-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
 .hw-layout #hw-actions { margin-bottom: 8px; }
 .caption { margin-top: 10px; min-height: 66px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); border-left: 3px solid var(--accent); font-size: 14.5px; }
-.table-wrap { overflow-x: auto; }
+.table-wrap { overflow-x: auto; overflow-y: hidden; }
 .table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .table th, .table td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--border); vertical-align: top; }
 .table th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
@@ -1072,6 +1072,99 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
   .hash-row { grid-template-columns: minmax(0, 1fr); }
   .hash-out { grid-column: 1; }
   .proto-grid, .sec-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+
+/* Легенда: подпись над цветами */
+.legend-caption { margin: 0 0 4px; font-size: 13.5px; color: var(--muted); }
+/* Наведение на узел карты: только лёгкий отклик, карточка не меняется */
+@media (hover: hover) {
+  .node.clickable:hover .ring { stroke-width: 3; filter: drop-shadow(0 0 7px var(--c)); }
+  .node.clickable:hover .lbl { fill: #fff; }
+  .link-hit:hover { stroke: color-mix(in srgb, var(--accent) 18%, transparent); }
+}
+.node.clickable:focus-visible .ring { stroke-width: 3.5; filter: drop-shadow(0 0 8px var(--c)); }
+
+/* =====================================================================
+   ЭКРАН «ЧТО ВНУТРИ ЗАПРОСА»
+   ===================================================================== */
+.in-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.in-layout > .panel { margin-top: 0; }
+.in-dns { margin-bottom: 6px; }
+.in-stage .caption { min-height: 66px; }
+/* Матрёшка: каждый слой — рамка своего цвета вокруг предыдущего */
+.doll { min-height: 120px; }
+.doll-layer {
+  --c: var(--l-hw);
+  border: 2px solid color-mix(in srgb, var(--c) 75%, transparent);
+  background: color-mix(in srgb, var(--c) 7%, transparent);
+  border-radius: 12px; padding: 6px 8px 8px;
+  transition: box-shadow .3s, background .3s;
+}
+.doll-layer .doll-layer { margin-top: 6px; }
+.doll-head {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%;
+  background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer;
+  padding: 4px 4px; border-radius: 8px; min-height: 44px;
+}
+.doll-head:hover, .doll-head:focus-visible { background: color-mix(in srgb, var(--c) 16%, transparent); outline: none; }
+.doll-head:focus-visible { box-shadow: 0 0 0 2px var(--c); }
+.doll-head b { color: var(--c); font-size: 14px; }
+.doll-head span { font: 12.5px var(--mono); color: var(--text); word-break: break-word; }
+.doll-new { animation: doll-in .55s ease-out; }
+@keyframes doll-in { from { opacity: 0; transform: scale(1.06); box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 50%, transparent); } }
+.doll-flash { animation: doll-flash 1.4s ease-out; }
+@keyframes doll-flash { 0%, 35% { background: color-mix(in srgb, var(--c) 30%, transparent); box-shadow: 0 0 0 3px var(--c); } }
+.doll-empty { color: var(--muted); font-size: 14px; padding: 20px 0; text-align: center; }
+/* Письмо-запрос */
+.letter { background: #f3efe4; color: #2a2418; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; box-shadow: 0 6px 18px rgba(0, 0, 0, .25); }
+.letter-row { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 2px 10px; padding: 5px 0; border-bottom: 1px dashed #c9bfa6; font-size: 14px; }
+.letter-row b { color: #6b5a2e; }
+.letter-row code { grid-column: 2; background: none; padding: 0; color: #5c4f33; font-size: 12px; word-break: break-word; }
+.letter-stamp { margin-top: 10px; display: inline-block; padding: 4px 10px; border: 2px solid #b4442f; color: #b4442f; border-radius: 6px; font-weight: 700; font-size: 13px; transform: rotate(-1.5deg); }
+/* Развилка «Знаем IP-адрес?» */
+.fork { margin-top: 12px; }
+.fork-q { font-weight: 700; margin-bottom: 8px; }
+.fork-branches { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fork-b { display: flex; flex-direction: column; gap: 4px; text-align: left; font: inherit; font-size: 13.5px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 10px; padding: 10px 12px; cursor: pointer; min-height: 44px; transition: border-color .2s, background .2s, color .2s; }
+.fork-b b { color: var(--text); }
+.fork-b.on { border-color: var(--l-dns); background: color-mix(in srgb, var(--l-dns) 12%, var(--surface-2)); color: var(--text); box-shadow: 0 0 0 1px var(--l-dns); }
+.hop-log li { font-size: 13.5px; }
+.hop-log li b { color: var(--text); }
+/* Запрос и ответ в числах */
+.num-rows { display: grid; gap: 6px; }
+.num-row { display: grid; grid-template-columns: minmax(0, 1.3fr) auto minmax(0, 1fr); gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; background: var(--surface-2); font-size: 13px; }
+.num-row code { background: none; padding: 0; font-size: 12.5px; word-break: break-word; }
+.num-row span:last-child { color: var(--muted); }
+/* Формула и сравнение браузер ↔ API */
+.in-compare { margin-top: 16px; }
+.formula { display: grid; gap: 4px; margin: 4px 0 12px; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border-2); background: linear-gradient(90deg, color-mix(in srgb, var(--l-http) 14%, transparent), color-mix(in srgb, var(--l-api) 14%, transparent)); }
+.formula p { margin: 0; font-size: 17px; font-weight: 700; }
+.formula p:first-child { color: var(--l-http); }
+.formula p:last-child { color: var(--l-api); }
+@media (max-width: 960px) {
+  .in-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .fork-branches { grid-template-columns: minmax(0, 1fr); }
+  .num-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .num-row span:last-child { grid-column: 1 / -1; }
+  .letter-row { grid-template-columns: minmax(0, 1fr); }
+  .letter-row code { grid-column: 1; }
+  /* На телефоне: сначала текст шага, потом схема и матрёшка */
+  #screen-inside.active { display: flex; flex-direction: column; gap: 12px; }
+  #screen-inside :is(.in-layout, .req-grid) { display: contents; }
+  #screen-inside .panel { margin-top: 0; }
+  #screen-inside .screen-head { order: 0; margin-bottom: 0; }
+  #screen-inside .tabs { order: 1; margin-bottom: 0; }
+  #screen-inside .step-panel { order: 2; }
+  #screen-inside .in-anatomy { order: 3; }
+  #screen-inside .in-stage { order: 4; }
+  #screen-inside .payload-panel { order: 5; }
+  #screen-inside #in-compare { order: 6; }
+  #screen-inside .in-numbers-title { order: 7; margin: 12px 0 0; }
+  #screen-inside #in-numbers { order: 8; margin-top: 0; }
+  #screen-inside .screen-foot { order: 9; margin-top: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -89,7 +89,34 @@
       <div class="panel stage-wrap"><svg id="map-svg" role="img" aria-label="Схема: дом, провайдер, интернет, сервер"></svg></div>
       <aside class="panel info-card" id="map-card" aria-live="polite"></aside>
     </div>
-    <div class="panel legend-panel" id="map-legend"></div>
+  </section>
+
+  <!-- Что внутри запроса: пример с YouTube и с API погоды -->
+  <section class="screen" id="screen-inside" data-screen="inside">
+    <div class="tabs" id="in-tabs" role="tablist" aria-label="Пример запроса"></div>
+    <div class="in-layout">
+      <div class="panel stage-wrap in-stage">
+        <div id="in-dns" class="btn-row in-dns" role="group" aria-label="Адрес сервера уже известен?"></div>
+        <svg id="in-svg" role="img" aria-label="Путь запроса от ноутбука до сервера"></svg>
+        <div id="in-hop" class="caption" aria-live="polite"></div>
+        <div id="in-controls"></div>
+      </div>
+      <aside class="panel in-anatomy" aria-label="Анатомия пакета">
+        <div class="small-title">Анатомия пакета</div>
+        <div id="in-doll" class="doll" aria-live="polite"></div>
+        <p class="hint">Слои добавляются вокруг сути запроса. Нажми на слой, чтобы открыть объяснение.</p>
+      </aside>
+    </div>
+    <div class="req-grid">
+      <div class="panel step-panel">
+        <div id="in-progress" class="progress" aria-label="Шаги"></div>
+        <div id="in-step" aria-live="polite"></div>
+      </div>
+      <div class="panel payload-panel"><div id="in-payload"></div></div>
+    </div>
+    <div id="in-compare"></div>
+    <h3 class="section-title in-numbers-title">Запрос и ответ в числах</h3>
+    <div class="grid-2" id="in-numbers"></div>
   </section>
 
   <!-- 2. Путь одного запроса -->
