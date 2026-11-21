@@ -286,8 +286,8 @@ class Stage {
         hit.addEventListener('click', () => this.cfg.onNodeClick(l.id));
         hit.addEventListener('keydown', e => { if (e.key === 'Enter') this.cfg.onNodeClick(l.id); });
         if (this.cfg.onNodeHover) {
-          hit.addEventListener('mouseenter', () => this.cfg.onNodeHover(l.id));
-          hit.addEventListener('mouseleave', () => this.cfg.onNodeHover(null));
+          hit.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') this.cfg.onNodeHover(l.id); });
+          hit.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') this.cfg.onNodeHover(null); });
         }
         this.gLinks.append(hit);
       }
@@ -327,8 +327,9 @@ class Stage {
       g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.cfg.onNodeClick(id); } });
     }
     if (this.cfg.onNodeHover) {
-      g.addEventListener('mouseenter', () => this.cfg.onNodeHover(id));
-      g.addEventListener('mouseleave', () => this.cfg.onNodeHover(null));
+      // Только мышь: касание на телефоне не должно считаться «наведением»
+      g.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') this.cfg.onNodeHover(id); });
+      g.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') this.cfg.onNodeHover(null); });
     }
     this.nodeEls[id] = g;
     return g;
@@ -520,11 +521,14 @@ const MapScreen = {
   },
   show(id) {
     const it = id && this.find(id);
+    const key = it ? id : null;
+    if (this.shown === key && this.card.childElementCount) return;
+    this.shown = key;
     if (!it) {
       this.card.style.removeProperty('--c');
       put(this.card, h('div', { class: 'card-empty' },
-        h('h3', { text: 'Наведи на любой элемент' }),
-        h('p', { text: 'Каждый узел и линии с подписями кликабельны. Нажатие закрепляет карточку. Как читать карту:' }),
+        h('h3', { text: 'Нажми на любой элемент схемы' }),
+        h('p', { text: 'Каждый узел и линии с подписями кликабельны: нажатие открывает и закрепляет карточку (на компьютере можно просто навести курсор). Как читать карту:' }),
         h('ul', {}, MAP.intro.map(t => h('li', { text: t })))));
       return;
     }
@@ -1152,7 +1156,7 @@ const ApiScreen = {
         const note = API.notes[id];
         const span = h('span', { class: 'ann', style: `--c: var(--l-${note.part})`, 'data-part': note.part, tabindex: 0, role: 'button', text });
         const showIt = () => this.explain(id, span);
-        span.addEventListener('mouseenter', showIt);
+        span.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') showIt(); });
         span.addEventListener('click', showIt);
         span.addEventListener('focus', showIt);
         ln.append(span);
@@ -1345,7 +1349,8 @@ const SshScreen = {
 const GlossaryScreen = {
   init(root) {
     this.filter = 'all';
-    const used = [...new Set(GLOSSARY.map(g => g.layer))];
+    this.items = glossaryItems();
+    const used = [...new Set(this.items.map(g => g.layer))];
     const filters = $('#gloss-filters', root);
     const mk = (key, content) => h('button', { class: 'btn sm' + (key === 'all' ? ' selected' : ''), type: 'button', 'data-key': key, onclick: () => {
       this.filter = key;
@@ -1359,7 +1364,7 @@ const GlossaryScreen = {
   render() {
     const q = $('#gloss-q').value.trim();
     const ql = q.toLowerCase();
-    const items = GLOSSARY.filter(g => (this.filter === 'all' || g.layer === this.filter)
+    const items = this.items.filter(g => (this.filter === 'all' || g.layer === this.filter)
       && (!ql || (g.term + ' ' + g.def).toLowerCase().includes(ql)));
     const markText = text => {
       if (!q) return [text];
@@ -1376,13 +1381,28 @@ const GlossaryScreen = {
       return h('article', { class: 'term-card', style: `--c: var(--l-${g.layer})` },
         h('h4', {}, markText(g.term)),
         h('p', {}, markText(g.def)),
-        (k => k ? h('div', { class: 'term-more' }, termPill(k, 'Подробное объяснение: ' + TERMS[k].abbr)) : null)(TermLinker.keyIn(g.term) || GLOSSARY_TERM[g.term]),
+        g.key ? h('div', { class: 'term-more' }, termPill(g.key, 'Подробное объяснение: ' + TERMS[g.key].abbr)) : null,
         h('div', { class: 'term-meta' }, chip(g.layer, LAYERS[g.layer].name),
           h('a', { href: '#' + g.screen, text: `→ Экран ${si}: ${SCREENS[si].short}` })));
     }) : [h('div', { class: 'gloss-empty', text: 'Ничего не нашлось. Попробуй другое слово или фильтр «Все».' })]));
-    $('#gloss-count').textContent = `Показано терминов: ${items.length} из ${GLOSSARY.length}`;
+    $('#gloss-count').textContent = `Показано терминов: ${items.length} из ${this.items.length}`;
   },
 };
+
+/* Глоссарий = ручные записи GLOSSARY + все термины словаря TERMS, которых в нём нет.
+   Так новый термин в TERMS сам попадает в глоссарий. */
+function glossaryItems() {
+  const items = GLOSSARY.map(g => ({ ...g, key: TermLinker.keyIn(g.term) || GLOSSARY_TERM[g.term] || null }));
+  const covered = new Set(items.map(g => g.key).filter(Boolean));
+  for (const [key, t] of Object.entries(TERMS)) {
+    if (covered.has(key)) continue;
+    items.push({
+      term: hasExpansion(key) ? `${t.abbr} (${t.full})` : `${t.abbr} — ${t.ru}`,
+      layer: t.layer || 'hw', screen: TERM_HOME[key] || 'protocols', def: t.what, key,
+    });
+  }
+  return items.sort((a, b) => a.term.localeCompare(b.term, 'ru'));
+}
 
 /* =====================================================================
    ЭКРАНЫ ВТОРОЙ ВЕРСИИ: «С чего начать», OSI, адреса, TCP/UDP,
@@ -2693,7 +2713,7 @@ const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const isPhone = () => window.matchMedia('(max-width: 768px)').matches;
 // Для инструментов и «русских» терминов расшифровка в скобках не нужна
 const NO_EXPAND = new Set(['ping', 'traceroute', 'nslookup', 'ipv6', 'port', 'router', 'switch', 'packet']);
-const hasExpansion = key => !NO_EXPAND.has(key);
+const hasExpansion = key => !NO_EXPAND.has(key) && /[A-Za-z]/.test(TERMS[key].abbr);
 function expansion(t) {
   return t.full && t.full !== t.abbr ? `${t.full}, «${t.ru}»` : `«${t.ru}»`;
 }
@@ -2720,8 +2740,8 @@ function termPill(key, text, expand = false) {
 const TermLinker = {
   SKIP: 'pre, code, button, a, svg, input, textarea, select, label, h1, h2, h3, h4, .chip, .term-exp, .proto, .term-body, '
     + '.br-doc, .nav, .topbar, .tooltip, .layer-cell, .pdu, .env-v, .vis-row, .cache, .log-list.compact, .eyebrow, .small-title, '
-    + '.payload-title, .step-num, .slot, .counter, .wire, .mini-bar, .legend-bar, .tp-title, .tp-layer, .no-terms',
-  NO_EXP: 'td, th, .status, .lane-caption, .lane-delivered, .hint-inline, .caption, .hint, .tp-body',
+    + '.payload-title, .step-num, .slot, .counter, .wire, .mini-bar, .legend-bar, .tp-title, .tp-layer, .no-terms, .port-badge, .proto-ru, .proto-full, .hash-out, .pdu-row',
+  NO_EXP: 'td, th, .status, .lane-caption, .lane-delivered, .hint-inline, .caption, .hint, .tp-body, .proto-card, .sec-card, .log-list',
   init() {
     this.keyOf = new Map();
     for (const [key, t] of Object.entries(TERMS)) for (const m of (t.match || [t.abbr])) this.keyOf.set(m, key);
@@ -2813,7 +2833,9 @@ const TermPanel = {
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && this.dlg.open) { e.preventDefault(); this.close(); } });
     // Тап по затемнённому фону: событие приходит на сам <dialog>, а не на его содержимое
     this.dlg.addEventListener('click', e => { if (e.target === this.dlg) this.close(); });
-    this.dlg.addEventListener('close', () => this.cleanup());
+    // Событие close приходит с задержкой. Если за это время панель уже открыли снова
+    // (быстрое нажатие на другой термин), запоздавшее событие ничего не должно сбрасывать.
+    this.dlg.addEventListener('close', () => { if (!this.dlg.open && this.key) this.cleanup(); });
     document.addEventListener('click', e => {
       const pill = e.target.closest('.term-pill');
       if (pill) { e.preventDefault(); this.open(pill.dataset.term, pill); }
@@ -2855,8 +2877,9 @@ const TermPanel = {
     $('#tp-title').focus({ preventScroll: true });
   },
   close() {
-    document.documentElement.classList.remove('sheet-open');
-    if (this.dlg.open) this.dlg.close();
+    if (!this.dlg.open) return;
+    this.dlg.close();
+    this.cleanup();  // сразу, не дожидаясь события close
   },
   cleanup() {
     document.documentElement.classList.remove('sheet-open');
@@ -2880,6 +2903,7 @@ const TermPanel = {
     if (this.history.length) $('span', this.backBtn).textContent = TERMS[this.history[this.history.length - 1]].abbr;
     $$('#tp-mode button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === this.mode)));
     const sec = (title, ...kids) => h('section', { class: 'tp-sec' }, h('h3', { text: title }), kids);
+    const attack = t.kind === 'attack';
     const hasStage = App.stages.some(s => s.screen === App.current);
     const canShow = hasStage && (t.layer || this.nodesHere(t).length);
     const home = TERM_HOME[key];
@@ -2887,12 +2911,16 @@ const TermPanel = {
       h('h2', { id: 'tp-title', class: 'tp-title', tabindex: '-1' },
         h('span', { class: 'tp-dot', 'aria-hidden': 'true' }), t.abbr,
         hasExpansion(key) ? h('span', { class: 'tp-exp', text: ` (${expansion(t)})` }) : h('span', { class: 'tp-exp', text: ` — ${t.ru}` })),
-      h('div', { class: 'tp-layer' }, t.layer ? chip(t.layer, 'Слой: ' + LAYERS[t.layer].name) : h('span', { class: 'hint', text: 'Общий термин: относится ко всем слоям сразу' })),
+      h('div', { class: 'tp-layer' },
+        t.layer ? chip(t.layer, 'Слой: ' + LAYERS[t.layer].name) : h('span', { class: 'hint', text: 'Общий термин: относится ко всем слоям сразу' }),
+        full && t.tcpip ? chip(TCPIP_LEVELS[t.tcpip].layer, 'Уровень TCP/IP: ' + TCPIP_LEVELS[t.tcpip].name, 'Уровень модели TCP/IP, на котором работает протокол') : null,
+        full && t.port ? h('span', { class: 'port-badge', 'data-tip': 'Порт по умолчанию', text: 'Порт: ' + t.port }) : null),
       sec('Что это', h('p', { text: t.what })),
-      full ? sec('Зачем нужно', h('p', { text: t.why })) : null,
-      full ? sec('Как работает', h('ol', { class: 'tp-steps' }, t.how.map(x => h('li', { text: x })))) : null,
+      full ? sec(attack ? 'Чем опасно' : 'Зачем нужно', h('p', { text: t.why })) : null,
+      full ? sec(attack ? 'Как работает (идея, без инструкций)' : 'Как работает', h('ol', { class: 'tp-steps' }, t.how.map(x => h('li', { text: x })))) : null,
       h('div', { class: 'analogy tp-analogy' }, h('b', { text: 'Аналогия' }), h('p', { text: t.analogy })),
-      full ? sec('Что будет, если этого нет', h('p', { text: t.without })) : null,
+      full && attack ? sec('Как защищаются', h('ul', { class: 'tp-steps' }, t.defense.map(x => h('li', { text: x })))) : null,
+      full && t.without ? sec('Что будет, если этого нет', h('p', { text: t.without })) : null,
       full && t.tech ? sec('Технические детали', h('p', { class: 'tp-tech', text: t.tech })) : null,
       full && t.related?.length ? sec('Связанные термины', h('div', { class: 'tp-related' }, t.related.map(k => termPill(k)))) : null,
       full ? h('div', { class: 'tp-actions' },
@@ -2950,7 +2978,7 @@ const Highlight = {
     const id = App.current;
     if (!this.style) document.head.append(this.style = h('style', { id: 'hl-style' }));
     const sc = `#screen-${id}`;
-    const html = ':is(.layer-cell, .osi-cell, .tcp-cell, .wire button, .pdu-part, .card, .term-pill, .chip:not(.legend-btn), .ba)';
+    const html = ':is(.layer-cell, .osi-cell, .tcp-cell, .wire button, .pdu-part, .card, .proto-card, .term-pill, .chip:not(.legend-btn), .ba)';
     this.style.textContent = key ? `
       ${sc} .stage :is(.node, .dot, .link, .zone, .zone-label, .link-label):not([data-layer="${key}"]):not(.spot) { opacity: .14; }
       ${sc} .stage :is(.node, .dot)[data-layer="${key}"] { filter: drop-shadow(0 0 7px var(--l-${key})); }
@@ -3020,7 +3048,7 @@ function buildMobileNav() {
         h('span', { class: 'num' }, s.id === 'start' ? icon('play') : String(screenNum(s.id))), s.title)))))));
   $('#menu-close').addEventListener('click', () => closeMenu());
   dlg.addEventListener('click', e => { if (e.target === dlg) closeMenu(); });
-  dlg.addEventListener('close', () => document.documentElement.classList.remove('sheet-open'));
+  dlg.addEventListener('close', () => { if (!$('#term-panel').open) document.documentElement.classList.remove('sheet-open'); });
   initSwipeToClose(dlg, $('.tp-head', dlg), () => closeMenu());
 }
 function closeMenu() {
@@ -3054,13 +3082,316 @@ function updateMobileNav(id) {
 }
 
 /* =====================================================================
+   РАЗДЕЛ «РАСШИРЕННЫЙ УРОВЕНЬ»: карта протоколов и безопасность
+   ===================================================================== */
+
+/* ---------- Карта всех протоколов ---------- */
+const ProtocolsScreen = {
+  init(root) {
+    this.level = 'all';
+    const filters = $('#proto-filters', root);
+    const mk = (id, content) => h('button', {
+      class: 'btn sm' + (id === 'all' ? ' selected' : ''), type: 'button', 'data-level': id, 'aria-pressed': String(id === 'all'),
+      onclick: () => {
+        this.level = id;
+        $$('#proto-filters .btn').forEach(b => { const on = b.dataset.level === id; b.classList.toggle('selected', on); b.setAttribute('aria-pressed', String(on)); });
+        this.render();
+      },
+    }, content);
+    filters.append(mk('all', 'Все уровни'), ...Object.entries(TCPIP_LEVELS).map(([id, lv]) => mk(id, chip(lv.layer, lv.name, 'Уровень модели TCP/IP'))));
+    $('#proto-q', root).addEventListener('input', () => this.render());
+    this.render();
+  },
+  card(key) {
+    const t = TERMS[key], lv = TCPIP_LEVELS[t.tcpip];
+    return h('article', { class: 'proto-card', style: t.layer ? `--c: var(--l-${t.layer})` : null, 'data-layer': t.layer },
+      h('div', { class: 'proto-head' }, termPill(key), h('span', { class: 'proto-full', text: t.full !== t.abbr ? t.full : '' })),
+      h('div', { class: 'proto-ru', text: t.ru }),
+      h('div', { class: 'proto-meta' },
+        chip(lv.layer, 'Уровень: ' + lv.name, 'Уровень модели TCP/IP, на котором работает протокол'),
+        h('span', { class: 'port-badge', 'data-tip': 'Порт по умолчанию', text: 'Порт: ' + t.port })),
+      h('p', { text: t.what }),
+      h('p', { class: 'proto-ex' }, h('b', { text: 'Пример из жизни. ' }), t.why),
+      h('div', { class: 'analogy', text: 'Аналогия: ' + t.analogy }));
+  },
+  render() {
+    const q = $('#proto-q').value.trim().toLowerCase();
+    const fits = key => {
+      const t = TERMS[key];
+      if (this.level !== 'all' && t.tcpip !== this.level) return false;
+      return !q || [t.abbr, t.full, t.ru, t.what, t.why, t.port].join(' ').toLowerCase().includes(q);
+    };
+    let shown = 0, total = 0;
+    const groups = PROTO_GROUPS.map(g => {
+      total += g.keys.length;
+      const keys = g.keys.filter(fits);
+      shown += keys.length;
+      return keys.length ? h('section', { class: 'proto-group' },
+        h('h3', { class: 'section-title', text: g.title }),
+        h('p', { class: 'hint', text: g.about }),
+        h('div', { class: 'proto-grid' }, keys.map(k => this.card(k)))) : null;
+    });
+    put($('#proto-groups'), shown ? groups : h('div', { class: 'gloss-empty', text: 'Ничего не нашлось. Попробуй другое слово или «Все уровни».' }));
+    $('#proto-count').textContent = `Показано протоколов: ${shown} из ${total}`;
+  },
+};
+
+/* ---------- Защита и безопасность ---------- */
+const SecurityScreen = {
+  init(root) {
+    this.clock = new Clock();       // туннель VPN
+    this.guardClock = new Clock();  // «сторожа»
+    this.clocks = [this.clock, this.guardClock];
+    this.started = new Set();
+    this.tabBtns = SECURITY.tabs.map(tab => h('button', {
+      class: 'tab', type: 'button', role: 'tab', id: 'sectab-' + tab.id, 'aria-controls': 'secpanel-' + tab.id, 'aria-selected': 'false',
+      style: `--c: var(--l-${tab.layer})`, onclick: () => this.tab(tab.id),
+    }, tab.title));
+    $('#sec-tabs', root).append(...this.tabBtns);
+    $('#sec-panels', root).append(...SECURITY.tabs.map(tab => {
+      const panelEl = h('div', { class: 'tab-panel', id: 'secpanel-' + tab.id, role: 'tabpanel', 'aria-labelledby': 'sectab-' + tab.id, hidden: true },
+        h('p', { class: 'lead small sec-intro', text: tab.intro }),
+        tab.extra ? this.extra(tab.extra) : null,
+        h('div', { class: 'sec-grid' }, tab.keys.map(k => this.card(k))));
+      return panelEl;
+    }));
+    this.tab('crypto');
+  },
+  tab(id) {
+    SECURITY.tabs.forEach((t, i) => {
+      const on = t.id === id;
+      this.tabBtns[i].classList.toggle('selected', on);
+      this.tabBtns[i].setAttribute('aria-selected', String(on));
+      $('#secpanel-' + t.id).hidden = !on;
+    });
+    // Анимации вкладок запускаются при первом показе
+    if (!this.started.has(id)) {
+      this.started.add(id);
+      if (id === 'crypto') this.runTunnel();
+      if (id === 'guards') this.pickGuard('firewall');
+    }
+  },
+  card(key) {
+    const t = TERMS[key];
+    const attack = t.kind === 'attack';
+    return h('article', { class: 'panel card sec-card', style: `--c: var(--l-${t.layer || 'sec'})`, 'data-layer': t.layer },
+      h('div', { class: 'sec-head' }, termPill(key), h('span', { class: 'proto-full', text: hasExpansion(key) ? t.full : t.ru })),
+      h('p', { text: t.what }),
+      h('div', { class: 'card-sec' }, h('b', { text: attack ? 'Как работает (идея)' : 'Как работает' }),
+        h('ol', { class: 'mini-steps' }, t.how.map(x => h('li', { text: x })))),
+      attack ? h('div', { class: 'card-sec defense' }, h('b', { text: 'Как защищаются' }), h('ul', { class: 'mini-steps' }, t.defense.map(x => h('li', { text: x })))) : null,
+      h('div', { class: 'analogy', text: 'Аналогия: ' + t.analogy }));
+  },
+  extra(kind) {
+    if (kind === 'wifi') return h('div', { class: 'panel' }, beforeAfter(SECURITY.wifi));
+    if (kind === 'dns') return h('div', { class: 'panel' }, beforeAfter(SECURITY.dns));
+    if (kind === 'tunnel') return this.buildTunnel();
+    if (kind === 'guards') return this.buildGuards();
+    if (kind === 'hash') return this.buildHash();
+    return null;
+  },
+
+  /* --- VPN-туннель: исходный пакет заворачивается в зашифрованный --- */
+  buildTunnel() {
+    const svg = sv('svg', { role: 'img', 'aria-label': 'Пакет внутри VPN-туннеля' });
+    this.tunCaption = h('div', { class: 'caption', 'aria-live': 'polite' });
+    const ctrl = makeControls({
+      onRestart: () => this.runTunnel(), restartTip: 'Сначала',
+      onToggle: () => { this.clock.paused = !this.clock.paused; ctrl.setPlaying(!this.clock.paused); },
+      playLabels: ['Продолжить', 'Пауза'],
+    });
+    ctrl.setPlaying(true);
+    const box = h('div', { class: 'panel' },
+      h('div', { class: 'small-title', text: 'Как пакет едет через VPN-туннель' }),
+      h('div', { class: 'stage-wrap' }, svg),
+      this.tunCaption, ctrl.el,
+      h('div', { class: 'small-title', style: 'margin-top:14px', text: 'Что видно снаружи туннеля' }),
+      h('div', { class: 'pdu-row tun-pdu' },
+        h('span', { class: 'pdu-part', style: '--c: var(--l-ip)', 'data-layer': 'ip', text: 'IP: ты → VPN-сервер' }),
+        h('span', { class: 'pdu-part', style: '--c: var(--l-tls)', 'data-layer': 'tls', text: 'WireGuard / IPsec' }),
+        h('span', { class: 'pdu-part grow', style: '--c: var(--l-http)', 'data-layer': 'http', text: '🔒 исходный пакет: ты → сайт, GET /' })),
+      h('p', { class: 'hint', text: 'Провайдер видит только внешний конверт: «к VPN-серверу». Что внутри и куда идёт дальше — нет.' }));
+    this.tunStage = new Stage(svg, this.clock, {
+      size: { wide: [760, 190], tall: [360, 470] }, breakpoint: 560,
+      nodes: {
+        you:  { label: 'Ты', icon: 'laptop', layer: 'app', wide: [70, 95], tall: [180, 40] },
+        isp:  { label: 'Провайдер / Wi-Fi', icon: 'building', layer: 'ip', wide: [270, 95], tall: [180, 160] },
+        vpn:  { label: 'VPN-сервер', icon: 'lock', layer: 'tls', wide: [480, 95], tall: [180, 285] },
+        site: { label: 'Сайт', icon: 'server', layer: 'http', wide: [690, 95], tall: [180, 410] },
+      },
+      links: [{ id: 't1', from: 'you', to: 'isp', layer: 'tls' }, { id: 't2', from: 'isp', to: 'vpn', layer: 'tls' }, { from: 'vpn', to: 'site', type: 'fiber' }],
+    });
+    this.tunStage.setMark('tun', ['t1', 't2']);
+    return box;
+  },
+  async runTunnel() {
+    const st = this.tunStage, c = this.clock;
+    c.cancel(); st.reset(); c.paused = false;
+    const say = t => { this.tunCaption.textContent = t; };
+    try {
+      for (;;) {
+        say('Ты открываешь сайт. Пакет «ты → сайт» заворачивается в зашифрованный конверт «ты → VPN-сервер».');
+        await st.fly(['you', 'isp', 'vpn'], { layer: 'tls', label: '🔒', speed: 200 });
+        say('VPN-сервер снимает конверт, видит исходный пакет и отправляет его сайту уже от своего адреса.');
+        await c.wait(0.8);
+        await st.fly(['vpn', 'site'], { layer: 'http', label: 'GET', speed: 200 });
+        say('Сайт отвечает VPN-серверу — он думает, что разговаривает с ним.');
+        await st.fly(['site', 'vpn'], { layer: 'http', label: 'HTML', speed: 200 });
+        say('VPN-сервер заворачивает ответ в туннель и отправляет тебе. Провайдер снова видит только шифр.');
+        await st.fly(['vpn', 'isp', 'you'], { layer: 'tls', label: '🔒', speed: 200 });
+        await c.wait(2);
+      }
+    } catch (e) { ignoreCancel(e); }
+  },
+
+  /* --- «Сторожа»: кого пропускают, кого блокируют --- */
+  buildGuards() {
+    const keys = Object.keys(SECURITY.guards);
+    this.guardBtns = keys.map(k => h('button', { class: 'btn sm', type: 'button', 'data-guard': k, 'aria-pressed': 'false', onclick: () => this.pickGuard(k) }, TERMS[k].abbr));
+    const svg1 = sv('svg', { role: 'img', 'aria-label': 'Сторож трафика' });
+    const svg2 = sv('svg', { role: 'img', 'aria-label': 'Балансировщик нагрузки' });
+    this.guardWrap1 = h('div', { class: 'stage-wrap' }, svg1);
+    this.guardWrap2 = h('div', { class: 'stage-wrap', hidden: true }, svg2);
+    this.guardLog = h('ol', { class: 'log-list guard-log' });
+    this.guardCnt = h('div', { class: 'fw-counters' });
+    this.guardWhat = h('div', { class: 'caption' });
+    const ctrl = makeControls({
+      onRestart: () => this.pickGuard(this.guard), restartTip: 'Сначала',
+      onToggle: () => { this.guardClock.paused = !this.guardClock.paused; ctrl.setPlaying(!this.guardClock.paused); },
+      playLabels: ['Продолжить', 'Пауза'],
+    });
+    ctrl.setPlaying(true);
+    const box = h('div', { class: 'panel' },
+      h('div', { class: 'small-title', text: 'Выбери сторожа' }),
+      h('div', { class: 'btn-row' }, this.guardBtns),
+      this.guardWhat, this.guardCnt, this.guardWrap1, this.guardWrap2, ctrl.el,
+      h('div', { class: 'small-title', style: 'margin-top:12px', text: 'Журнал решений' }), this.guardLog);
+    const base = { size: { wide: [720, 190], tall: [360, 380] }, breakpoint: 520 };
+    this.guardStage = new Stage(svg1, this.guardClock, { ...base, nodes: {
+      src: { label: 'Интернет', icon: 'cloud', layer: 'ip', wide: [80, 95], tall: [180, 40] },
+      guard: { label: 'Сторож', icon: 'shield', layer: 'sec', wide: [360, 95], tall: [180, 185] },
+      dst: { label: 'Сервер', icon: 'server', layer: 'http', wide: [640, 95], tall: [180, 330] },
+    }, links: [{ from: 'src', to: 'guard' }, { from: 'guard', to: 'dst' }] });
+    this.lbStage = new Stage(svg2, this.guardClock, { size: { wide: [720, 260], tall: [360, 380] }, breakpoint: 520, nodes: {
+      src: { label: 'Пользователи', icon: 'user', layer: 'app', wide: [80, 130], tall: [180, 40] },
+      guard: { label: 'Балансировщик', icon: 'shield', layer: 'sec', wide: [330, 130], tall: [180, 170] },
+      s0: { label: 'Сервер 1', icon: 'server', layer: 'http', wide: [620, 40], tall: [60, 310] },
+      s1: { label: 'Сервер 2', icon: 'server', layer: 'http', wide: [620, 130], tall: [180, 310] },
+      s2: { label: 'Сервер 3', icon: 'server', layer: 'http', wide: [620, 220], tall: [300, 310] },
+    }, links: [{ from: 'src', to: 'guard' }, { from: 'guard', to: 's0' }, { from: 'guard', to: 's1' }, { from: 'guard', to: 's2' }] });
+    return box;
+  },
+  pickGuard(key) {
+    this.guard = key;
+    const g = SECURITY.guards[key], t = TERMS[key];
+    this.guardBtns.forEach(b => { const on = b.dataset.guard === key; b.classList.toggle('selected', on); b.setAttribute('aria-pressed', String(on)); });
+    this.guardWrap1.hidden = !!g.route;
+    this.guardWrap2.hidden = !g.route;
+    const st = g.route ? this.lbStage : this.guardStage;
+    if (!g.route) {
+      st.setLabel('src', { label: g.left });
+      st.setLabel('guard', { label: { statefulfw: 'Stateful firewall' }[key] || t.abbr });
+      st.setLabel('dst', { label: g.right });
+    }
+    put(this.guardWhat, termPill(key), ' ', t.what);
+    put(this.guardLog);
+    this.runGuard(st, g);
+  },
+  async runGuard(st, g) {
+    const c = this.guardClock;
+    c.cancel();
+    this.guardStage.reset(); this.lbStage.reset();
+    st.setMark('bad', []);
+    c.paused = false;
+    const stats = { pass: 0, block: 0, alert: 0 };
+    const counters = () => put(this.guardCnt,
+      h('div', { class: 'counter ok' }, h('b', { text: stats.pass }), 'пропущено'),
+      h('div', { class: 'counter bad' }, h('b', { text: stats.block }), 'заблокировано'),
+      g.items.some(i => i.verdict === 'alert') ? h('div', { class: 'counter warn' }, h('b', { text: stats.alert }), 'тревог') : null);
+    counters();
+    const log = (sym, cls, it) => {
+      this.guardLog.prepend(h('li', { class: cls, text: `${sym} ${it.label} — ${it.why}` }));
+      while (this.guardLog.children.length > 8) this.guardLog.lastChild.remove();
+    };
+    try {
+      for (let round = 0; ; round++) {
+        for (const it of g.items) {
+          await st.fly(['src', 'guard'], { layer: 'ip', label: it.label, speed: 220 });
+          const at = st.xy('guard');
+          if (it.verdict === 'block') {
+            st.cross(at); stats.block++; log('✕', 'bad', it);
+          } else if (it.verdict === 'route') {
+            if (it.to === 0 && g.items.indexOf(it) === 3) st.setMark('bad', ['s1']);
+            stats.pass++; log('→', 'ok', it);
+            await st.fly(['guard', 's' + it.to], { color: 'var(--ok)', label: it.label, speed: 220 });
+          } else {
+            if (it.verdict === 'alert') { stats.alert++; this.flag(st, at); log('⚠', 'warn', it); } else log('✓', 'ok', it);
+            stats.pass++;
+            await st.fly(['guard', 'dst'], { color: it.verdict === 'alert' ? 'var(--warn)' : 'var(--ok)', label: it.label, speed: 220 });
+          }
+          counters();
+          await c.wait(0.7);
+        }
+        st.setMark('bad', []);
+        await c.wait(1.5);
+      }
+    } catch (e) { ignoreCancel(e); }
+  },
+  // Значок тревоги над сторожем (IDS пропускает, но сигналит)
+  flag(st, p) {
+    const t = sv('text', { class: 'blocked-x alert-x', x: p.x, y: p.y - 36, text: '⚠' });
+    st.gDots.append(t);
+    t.animate?.([{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], { duration: 1200 });
+    setTimeout(() => t.remove(), 1250);
+  },
+
+  /* --- Хеширование: живой пример --- */
+  buildHash() {
+    const row = (label, value) => {
+      const inp = h('input', { type: 'text', class: 'hash-in', value, 'aria-label': label, autocomplete: 'off', spellcheck: 'false' });
+      const out = h('code', { class: 'hash-out' });
+      return { el: h('label', { class: 'hash-row' }, h('span', { text: label }), inp, out), inp, out };
+    };
+    const a = row('Пароль', 'kotik123'), b = row('Почти такой же', 'kotik124');
+    const verdict = h('div', { class: 'status' });
+    const update = async () => {
+      const [ha, hb] = await Promise.all([hashText(a.inp.value), hashText(b.inp.value)]);
+      a.out.textContent = ha;
+      b.out.textContent = hb;
+      const same = ha === hb;
+      verdict.className = 'status ' + (same ? 'ok' : 'wait');
+      verdict.textContent = same ? '✓ Отпечатки совпали — значит, пароли одинаковые. Так сайт и проверяет пароль при входе.'
+        : '✕ Отпечатки совсем разные, хотя пароли отличаются одним символом. По отпечатку нельзя угадать даже «похожий» пароль.';
+    };
+    [a, b].forEach(r => r.inp.addEventListener('input', update));
+    update();
+    return h('div', { class: 'panel' },
+      h('div', { class: 'small-title', text: 'Попробуй: пароль → отпечаток (хеш)' }),
+      a.el, b.el, verdict,
+      h('p', { class: 'hint', text: SECURITY.hashNote }));
+  },
+};
+
+// SHA-256 через встроенную криптографию браузера; если её нет (например, файл открыт без сервера) — учебная замена
+async function hashText(text) {
+  try {
+    if (window.crypto?.subtle) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+      return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join('');
+    }
+  } catch { /* упадём на запасной вариант */ }
+  return fakeCipher(text, 32).replace(/ /g, '');
+}
+
+/* =====================================================================
    5. НАВИГАЦИЯ И ГЛАВНЫЙ ЦИКЛ
    ===================================================================== */
 const SCREEN_IMPL = {
   start: StartScreen, map: MapScreen, request: RequestScreen, layers: LayersScreen, api: ApiScreen,
   osi: OsiScreen, addr: AddrScreen, hardware: HardwareScreen, tcpudp: TcpUdpScreen, dns: DnsScreen,
   firewall: FirewallScreen, web: WebScreen,
-  url: UrlScreen, ssh: SshScreen, terminal: TerminalScreen, diag: DiagScreen, glossary: GlossaryScreen,
+  url: UrlScreen, ssh: SshScreen, terminal: TerminalScreen, diag: DiagScreen,
+  protocols: ProtocolsScreen, security: SecurityScreen, glossary: GlossaryScreen,
 };
 
 /* Навигация в две строки: сверху разделы (NAV_GROUPS), снизу экраны выбранного раздела.
@@ -3129,7 +3460,7 @@ function go(id) {
   window.scrollTo(0, 0);
 }
 // Экраны, где есть схема или цветные слои — у них вверху кликабельная легенда
-const LEGEND_SCREENS = new Set(['map', 'request', 'layers', 'osi', 'addr', 'hardware', 'tcpudp', 'dns', 'firewall', 'web', 'url', 'ssh', 'terminal', 'diag']);
+const LEGEND_SCREENS = new Set(['map', 'request', 'layers', 'osi', 'addr', 'hardware', 'tcpudp', 'dns', 'firewall', 'web', 'url', 'ssh', 'terminal', 'diag', 'protocols', 'security']);
 
 function boot() {
   // Цвета слоёв из data.js → CSS-переменные --l-*

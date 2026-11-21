@@ -403,6 +403,25 @@
     </div>
   </section>
 
+  <!-- Расширенный уровень: карта всех протоколов -->
+  <section class="screen" id="screen-protocols" data-screen="protocols">
+    <div class="panel gloss-tools">
+      <label class="search">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-search"/></svg>
+        <input type="search" id="proto-q" placeholder="Поиск: почта, 443, звонки, время…" autocomplete="off" aria-label="Поиск протокола">
+      </label>
+      <div id="proto-filters" class="btn-row" role="group" aria-label="Фильтр по уровню TCP/IP"></div>
+      <div class="hint" id="proto-count"></div>
+    </div>
+    <div id="proto-groups"></div>
+  </section>
+
+  <!-- Расширенный уровень: защита и безопасность -->
+  <section class="screen" id="screen-security" data-screen="security">
+    <div class="tabs" id="sec-tabs" role="tablist" aria-label="Тема"></div>
+    <div id="sec-panels"></div>
+  </section>
+
   <!-- 9. Глоссарий -->
   <section class="screen" id="screen-glossary" data-screen="glossary">
     <div class="panel gloss-tools">
