@@ -83,28 +83,33 @@
     <div id="start-root"></div>
   </section>
 
-  <!-- 1. Общая карта -->
+  <!-- 1. Общая карта: общая сеть NETWORK, коротко или со всеми устройствами -->
   <section class="screen" id="screen-map" data-screen="map">
     <div class="map-layout">
-      <div class="panel stage-wrap"><svg id="map-svg" role="img" aria-label="Схема: дом, провайдер, интернет, сервер"></svg></div>
+      <div class="panel">
+        <div id="map-detail"></div>
+        <div id="map-net"></div>
+      </div>
       <aside class="panel info-card" id="map-card" aria-live="polite"></aside>
     </div>
   </section>
 
-  <!-- Что внутри запроса: пример с YouTube и с API погоды -->
+  <!-- 2. Путь запроса: четыре сценария по общей сети -->
   <section class="screen" id="screen-inside" data-screen="inside">
     <div class="tabs" id="in-tabs" role="tablist" aria-label="Пример запроса"></div>
     <div class="in-layout">
-      <div class="panel stage-wrap in-stage">
-        <div id="in-dns" class="btn-row in-dns" role="group" aria-label="Адрес сервера уже известен?"></div>
-        <svg id="in-svg" role="img" aria-label="Путь запроса от ноутбука до сервера"></svg>
+      <div class="panel in-stage">
+        <div id="in-toggles" class="in-toggles"></div>
+        <div id="in-net"></div>
         <div id="in-hop" class="caption" aria-live="polite"></div>
+        <div class="panel in-node" id="in-node" hidden aria-live="polite"></div>
         <div id="in-controls"></div>
       </div>
       <aside class="panel in-anatomy" aria-label="Анатомия пакета">
+        <div id="in-browser" hidden></div>
         <div class="small-title">Анатомия пакета</div>
         <div id="in-doll" class="doll" aria-live="polite"></div>
-        <p class="hint">Слои добавляются вокруг сути запроса. Нажми на слой, чтобы открыть объяснение.</p>
+        <p class="hint">Слои добавляются вокруг сути запроса. Нажми на слой, чтобы открыть объяснение, а на узел схемы — чтобы увидеть, что он читает.</p>
       </aside>
     </div>
     <div class="req-grid">
@@ -117,55 +122,6 @@
     <div id="in-compare"></div>
     <h3 class="section-title in-numbers-title">Запрос и ответ в числах</h3>
     <div class="grid-2" id="in-numbers"></div>
-  </section>
-
-  <!-- 2. Путь одного запроса -->
-  <section class="screen" id="screen-request" data-screen="request">
-    <div class="panel stage-wrap">
-      <svg id="req-svg" role="img" aria-label="Анимация пути запроса"></svg>
-      <div id="req-controls"></div>
-    </div>
-    <div class="req-grid">
-      <div class="panel step-panel">
-        <div id="req-progress" class="progress" aria-label="Шаги"></div>
-        <div id="req-step" aria-live="polite"></div>
-      </div>
-      <div class="panel payload-panel">
-        <div id="req-payload"></div>
-        <div id="req-assembly"></div>
-      </div>
-    </div>
-    <div class="panel layerbar-panel">
-      <div class="small-title">Какие слои работают на этом шаге</div>
-      <div id="req-layers" class="layerbar"></div>
-    </div>
-  </section>
-
-  <!-- 3. Слои -->
-  <section class="screen" id="screen-layers" data-screen="layers">
-    <div class="layers-layout">
-      <div class="panel">
-        <div class="row-between">
-          <div class="small-title">Сообщение, которое уходит в провод (снаружи — внутрь)</div>
-          <div class="btn-row">
-            <button class="btn sm" type="button" id="layers-open">Развернуть все</button>
-            <button class="btn sm" type="button" id="layers-close">Свернуть все</button>
-          </div>
-        </div>
-        <div id="matryoshka" class="matryoshka"></div>
-      </div>
-      <div class="side-col">
-        <div class="panel">
-          <div class="small-title">Так это выглядит «в проводе» — подряд, байт за байтом</div>
-          <div id="wire" class="wire"></div>
-          <p class="hint">Нажми на кусок, чтобы раскрыть его слой. Ширина условная: на деле заголовки маленькие (десятки байт), а данные — до ~1460 байт в одном пакете.</p>
-        </div>
-        <div class="panel">
-          <div class="small-title">Кто какой слой читает</div>
-          <div id="readers"></div>
-        </div>
-      </div>
-    </div>
   </section>
 
   <!-- 4. DNS -->
@@ -295,7 +251,7 @@
     <p class="lead small" id="cicd-note"></p>
   </section>
 
-  <!-- 10. Модели OSI и TCP/IP -->
+  <!-- Слои и модели: OSI и TCP/IP -->
   <section class="screen" id="screen-osi" data-screen="osi">
     <div class="osi-layout">
       <div class="panel">
@@ -309,6 +265,7 @@
       <aside class="panel info-card" id="osi-card" aria-live="polite"></aside>
     </div>
     <div class="panel lnums-panel" id="osi-lnums"></div>
+    <div class="panel" id="osi-readers"></div>
     <div class="panel" id="osi-facts"></div>
   </section>
 
@@ -359,33 +316,11 @@
     <div class="tab-panel" id="web-vpn" role="tabpanel" hidden></div>
   </section>
 
-  <!-- 14. Что происходит, когда вводишь адрес сайта -->
-  <section class="screen" id="screen-url" data-screen="url">
-    <div class="url-top">
-      <div class="panel browser-panel"><div id="url-browser"></div></div>
-      <div class="panel stage-wrap">
-        <svg id="url-svg" role="img" aria-label="Сеть: браузер, роутер, DNS, сервер"></svg>
-        <div id="url-controls"></div>
-      </div>
-    </div>
-    <div class="req-grid">
-      <div class="panel step-panel">
-        <div id="url-progress" class="progress" aria-label="Шаги"></div>
-        <div id="url-step" aria-live="polite"></div>
-      </div>
-      <div class="panel payload-panel"><div id="url-payload"></div></div>
-    </div>
-    <div class="panel layerbar-panel">
-      <div class="small-title">Какие уровни работают на этом шаге (номера — как на экране «OSI и TCP/IP»)</div>
-      <div id="url-layers" class="layerbar"></div>
-    </div>
-  </section>
-
   <!-- 15. Потрогай сам -->
   <section class="screen" id="screen-terminal" data-screen="terminal">
     <div class="panel stage-wrap">
       <div class="small-title">Что происходит в сети</div>
-      <svg id="term-svg" role="img" aria-label="Путь пакетов команды"></svg>
+      <div id="term-net"></div>
       <div id="term-caption" class="caption" aria-live="polite"></div>
       <div id="term-controls"></div>
     </div>

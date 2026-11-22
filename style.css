@@ -268,8 +268,6 @@ svg.stage { display: block; width: 100%; height: auto; overflow: visible; user-s
 .tk-dim { color: var(--faint); }
 
 /* ---------- 3. Слои ---------- */
-.layers-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
-.matryoshka { margin-top: 4px; }
 .layer-box {
   --c: var(--l-hw);
   border: 2px solid color-mix(in srgb, var(--c) 70%, transparent);
@@ -294,15 +292,11 @@ svg.stage { display: block; width: 100%; height: auto; overflow: visible; user-s
 .layer-who { font-size: 13px; color: var(--muted); margin-top: 6px; }
 .layer-core { margin-top: 8px; font: 13px/1.5 var(--mono); background: rgba(0, 0, 0, .3); border-radius: 8px; padding: 8px 10px; color: #f5d28a; white-space: pre-wrap; }
 
-.wire { display: flex; height: 54px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-2); }
-.wire button {
   --c: var(--l-hw);
   border: 0; border-right: 1px solid rgba(0, 0, 0, .45); padding: 0 2px; cursor: pointer;
   background: color-mix(in srgb, var(--c) 75%, #000); color: #0a0e16; font: 700 11px var(--sans);
   overflow: hidden; white-space: nowrap; text-overflow: ellipsis; transition: filter .15s;
 }
-.wire button:hover { filter: brightness(1.2); }
-.wire button:last-child { border-right: 0; }
 .readers { display: grid; gap: 8px; }
 .reader { display: flex; gap: 10px; align-items: center; font-size: 14px; flex-wrap: wrap; }
 .reader .icon { color: var(--muted); }
@@ -692,7 +686,7 @@ code.block { display: block; padding: 6px 9px; white-space: normal; word-break: 
 
 /* ---------- 15. Терминал ---------- */
 /* Схема сверху не должна отодвигать терминал за экран */
-#term-svg, #diag-svg { max-height: 240px; }
+#diag-svg { max-height: 240px; }
 .term-layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: stretch; margin-top: 16px; }
 .term-layout .term-panel { flex-direction: column; gap: 10px; }
 .term-tools { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
@@ -796,17 +790,7 @@ code.block { display: block; padding: 6px 9px; white-space: normal; word-break: 
   .screen-foot .btn { font-size: 13px; }
   .flow-arrow { display: none; }
   .flow-step { min-width: 40%; }
-  /* Экран «Запрос» на телефоне: сначала текст шага, потом схема */
-  #screen-request.active { display: flex; flex-direction: column; gap: 12px; }
-  #screen-request .req-grid { display: contents; }
-  #screen-request .panel { margin-top: 0; }
-  #screen-request .screen-head { order: 0; margin-bottom: 0; }
-  #screen-request .step-panel { order: 1; }
-  #screen-request > .stage-wrap { order: 2; }
-  #screen-request .payload-panel { order: 3; }
-  #screen-request .layerbar-panel { order: 4; }
-  #screen-request .screen-foot { order: 5; margin-top: 8px; }
-}
+  }
 
 /* Адаптивность новых экранов */
 @media (max-width: 1100px) {
@@ -836,17 +820,6 @@ code.block { display: block; padding: 6px 9px; white-space: normal; word-break: 
   .hdr-notes { grid-template-columns: minmax(0, 1fr); }
   .hdr-notes dd { margin-bottom: 4px; }
   .term-layout .term { min-height: 280px; }
-  /* Экран «Ввод адреса» на телефоне: сначала текст шага, потом браузер и схема */
-  #screen-url.active { display: flex; flex-direction: column; gap: 12px; }
-  #screen-url :is(.url-top, .req-grid) { display: contents; }
-  #screen-url .panel { margin-top: 0; }
-  #screen-url .screen-head { order: 0; margin-bottom: 0; }
-  #screen-url .step-panel { order: 1; }
-  #screen-url .browser-panel { order: 2; }
-  #screen-url .url-top > .stage-wrap { order: 3; }
-  #screen-url .payload-panel { order: 4; }
-  #screen-url .layerbar-panel { order: 5; }
-  #screen-url .screen-foot { order: 6; margin-top: 8px; }
 }
 
 /* =====================================================================
@@ -1090,7 +1063,8 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
    ===================================================================== */
 .in-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
 .in-layout > .panel { margin-top: 0; }
-.in-dns { margin-bottom: 6px; }
+.in-toggles { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; }
+.in-toggles > [hidden] { display: none; }
 .in-stage .caption { min-height: 66px; }
 /* Матрёшка: каждый слой — рамка своего цвета вокруг предыдущего */
 .doll { min-height: 120px; }
@@ -1165,6 +1139,28 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
   #screen-inside .in-numbers-title { order: 7; margin: 12px 0 0; }
   #screen-inside #in-numbers { order: 8; margin-top: 0; }
   #screen-inside .screen-foot { order: 9; margin-top: 8px; }
+}
+
+
+/* =====================================================================
+   ОБЩАЯ СЕТЬ: переключатель детализации, карточки узлов
+   ===================================================================== */
+.net-toggle { margin-bottom: 8px; }
+.net-wrap[hidden] { display: none; }
+#map-net .net-full svg.stage { max-height: 70vh; }
+.map-layout.stacked { grid-template-columns: minmax(0, 1fr); }
+.map-layout.stacked .info-card { position: static; }
+.parts { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; font-size: 14px; color: var(--muted); }
+.parts li { line-height: 1.7; }
+.card-top code { font-size: 12px; }
+.in-node { position: relative; margin-top: 10px; border-left: 3px solid var(--c, var(--accent)); }
+.in-node h3 { font-size: 17px; padding-right: 44px; }
+.in-node-close { position: absolute; top: 8px; right: 8px; }
+#in-browser { margin-bottom: 14px; }
+#in-browser .browser { min-height: 230px; }
+#term-net .net-route svg.stage { max-height: 300px; }
+@media (max-width: 760px) {
+  #term-net .net-route svg.stage { max-height: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

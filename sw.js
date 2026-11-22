@@ -1,7 +1,7 @@
 /* Service worker: учебник открывается и без интернета.
    Стратегия «сначала сеть»: если сеть есть — берём свежий файл и обновляем кэш,
    если нет — отдаём сохранённую копию. Так обновления на сайте видны сразу. */
-const CACHE = 'how-internet-works-v7';
+const CACHE = 'how-internet-works-v8';
 const FILES = [
   './', './index.html', './style.css', './data.js', './app.js', './manifest.webmanifest',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
