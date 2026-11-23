@@ -113,9 +113,12 @@
       </aside>
     </div>
     <div class="req-grid">
-      <div class="panel step-panel">
-        <div id="in-progress" class="progress" aria-label="Шаги"></div>
-        <div id="in-step" aria-live="polite"></div>
+      <!-- На телефоне эта панель закреплена внизу над навигацией: текст шага + кнопки шагов -->
+      <div class="panel step-panel" id="in-dock">
+        <div class="dock-body" id="in-dock-body">
+          <div id="in-progress" class="progress" aria-label="Шаги"></div>
+          <div id="in-step" aria-live="polite"></div>
+        </div>
       </div>
       <div class="panel payload-panel"><div id="in-payload"></div></div>
     </div>

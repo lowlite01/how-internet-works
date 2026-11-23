@@ -31,7 +31,9 @@
 }
 
 * { box-sizing: border-box; }
-html { color-scheme: dark; scroll-padding-top: calc(var(--topbar-h, 96px) + 12px); }
+html { color-scheme: dark; scroll-padding-top: calc(var(--topbar-h, 96px) + 12px); overscroll-behavior-x: none; }
+/* Прокрутка к блоку не прячет его под «липкую» шапку */
+.screen :is([id], .panel, .tabs, .controls) { scroll-margin-top: calc(var(--topbar-h, 96px) + 12px); }
 body {
   margin: 0;
   background: radial-gradient(1200px 600px at 80% -10%, #142036 0%, transparent 60%), var(--bg);
@@ -95,7 +97,9 @@ code { background: var(--surface-3); padding: 1px 5px; border-radius: 5px; }
 /* ---------- Экраны ---------- */
 main { max-width: 1260px; margin: 0 auto; padding: 0 20px 48px; }
 .screen { display: none; padding-top: 22px; }
-.screen.active { display: block; animation: fade-in .28s ease-out; }
+/* Только прозрачность: transform у экрана «ловил» бы закреплённые (position: fixed) панели внутри */
+.screen.active { display: block; animation: screen-in .28s ease-out; }
+@keyframes screen-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 .screen-head { margin-bottom: 18px; max-width: 860px; }
@@ -177,11 +181,13 @@ main { max-width: 1260px; margin: 0 auto; padding: 0 20px 48px; }
 
 /* ---------- SVG-сцена (общая для всех анимаций) ---------- */
 .stage-wrap { position: relative; }
-svg.stage { display: block; width: 100%; height: auto; overflow: visible; user-select: none; }
+/* --halo — цвет подложки под текстом: линии, проходящие за подписью, не мешают её читать.
+   touch-action: pan-y — горизонтальный свайп по схеме ничего не листает */
+svg.stage { --halo: #0f1520; display: block; width: 100%; height: auto; overflow: visible; user-select: none; touch-action: pan-y pinch-zoom; }
 .stage-wrap.mini svg.stage { max-height: 230px; }
 
 .zone { fill: rgba(125, 211, 252, .03); stroke: var(--border-2); stroke-dasharray: 6 6; }
-.zone-label { fill: var(--faint); font: 600 12px var(--sans); letter-spacing: .04em; text-transform: uppercase; }
+.zone-label { fill: var(--faint); font: 600 12px var(--sans); letter-spacing: .04em; text-transform: uppercase; paint-order: stroke; stroke: var(--halo); stroke-width: 5px; stroke-linejoin: round; }
 
 .link { stroke: var(--border-2); stroke-width: 2; }
 .link.wifi { stroke-dasharray: 3 7; stroke-linecap: round; stroke-width: 2.5; }
@@ -189,15 +195,20 @@ svg.stage { display: block; width: 100%; height: auto; overflow: visible; user-s
 .link.tunnel { stroke: var(--l-ssh); stroke-opacity: .5; stroke-width: 10; stroke-linecap: round; }
 .link.active { stroke: var(--accent); }
 .link-hit { stroke: transparent; stroke-width: 18; cursor: pointer; }
-.link-label { fill: var(--faint); font: 11px var(--sans); text-anchor: middle; pointer-events: none; }
+.link-label { fill: var(--faint); font: 11px var(--sans); text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: var(--halo); stroke-width: 5px; stroke-linejoin: round; }
+.link.dim { opacity: .25; }
 
 .node { --c: var(--l-hw); cursor: default; outline: none; }
 .node.clickable { cursor: pointer; }
 .node .ring { fill: var(--surface-2); stroke: var(--c); stroke-width: 2; transition: stroke-width .2s, fill .2s; }
 .node .halo { fill: none; stroke: var(--c); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; }
 .node .ic { color: var(--c); }
-.node .lbl { fill: var(--text); font: 600 14px var(--sans); paint-order: stroke; stroke: var(--bg); stroke-width: 3px; stroke-linejoin: round; }
-.node .sub { fill: var(--muted); font: 11.5px var(--mono); paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
+.node .lbl { fill: var(--text); font: 600 14px var(--sans); paint-order: stroke; stroke: var(--halo); stroke-width: 6px; stroke-linejoin: round; }
+.node .sub { fill: var(--muted); font: 11.5px var(--mono); paint-order: stroke; stroke: var(--halo); stroke-width: 6px; stroke-linejoin: round; }
+/* Телефон: компактные подписи */
+svg.stage.compact .node .lbl { font-size: 12.5px; }
+svg.stage.compact .node .sub { font-size: 10.5px; }
+svg.stage.compact .zone-label { font-size: 11px; }
 .node:hover .ring, .node:focus-visible .ring { fill: var(--surface-3); }
 .node.active .ring { stroke-width: 3.5; fill: color-mix(in srgb, var(--c) 18%, var(--surface-2)); }
 .node.dim { opacity: .35; }
@@ -989,7 +1000,9 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
     background: rgba(10, 14, 22, .95); backdrop-filter: blur(10px); border-top: 1px solid var(--border);
   }
-  body { padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
+  :root { --bn-h: 64px; }  /* высота нижней навигации без «безопасной зоны» iPhone */
+  /* Текст не прячется под нижней навигацией (и под плашкой шага, если она есть) */
+  body { padding-bottom: calc(var(--bn-h) + env(safe-area-inset-bottom) + var(--dock-h, 0px) + 16px); }
   .topbar { padding: 8px 14px; }
   .topbar-row { gap: 12px; }
   .nav-groups, #nav { display: none; }
@@ -1125,15 +1138,14 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
   .num-row span:last-child { grid-column: 1 / -1; }
   .letter-row { grid-template-columns: minmax(0, 1fr); }
   .letter-row code { grid-column: 1; }
-  /* На телефоне: сначала текст шага, потом схема и матрёшка */
+  /* На телефоне: схема сразу под вкладками, текст шага — в плашке внизу (см. «Плашка шага») */
   #screen-inside.active { display: flex; flex-direction: column; gap: 12px; }
   #screen-inside :is(.in-layout, .req-grid) { display: contents; }
   #screen-inside .panel { margin-top: 0; }
   #screen-inside .screen-head { order: 0; margin-bottom: 0; }
   #screen-inside .tabs { order: 1; margin-bottom: 0; }
-  #screen-inside .step-panel { order: 2; }
+  #screen-inside .in-stage { order: 2; }
   #screen-inside .in-anatomy { order: 3; }
-  #screen-inside .in-stage { order: 4; }
   #screen-inside .payload-panel { order: 5; }
   #screen-inside #in-compare { order: 6; }
   #screen-inside .in-numbers-title { order: 7; margin: 12px 0 0; }
@@ -1160,7 +1172,47 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 #in-browser .browser { min-height: 230px; }
 #term-net .net-route svg.stage { max-height: 300px; }
 @media (max-width: 760px) {
-  #term-net .net-route svg.stage { max-height: none; }
+  #term-net .net-route svg.stage, #map-net .net-full svg.stage { max-height: none; }
+}
+
+/* =====================================================================
+   ПЛАШКА ШАГА (телефон, «Путь запроса»): текст шага и кнопки шагов
+   закреплены над нижней навигацией, схема с пакетом остаётся видна.
+   На компьютере — обычная панель, шапка и кнопки плашки не нужны.
+   ===================================================================== */
+.dock-head, .dock-ctrl, .dock-hop { display: none; }
+@media (max-width: 760px) {
+  #screen-inside .step-panel {
+    position: fixed; z-index: 24; left: 6px; right: 6px;
+    bottom: calc(var(--bn-h, 64px) + env(safe-area-inset-bottom) + 4px);
+    display: flex; flex-direction: column; margin: 0; padding: 0;
+    background: #111a29; border: 1px solid #2a4a6b; border-radius: 14px;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, .5);
+  }
+  .dock-head {
+    display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; padding: 6px 12px;
+    border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+  }
+  .dock-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 14px; }
+  .dock-num { flex: none; color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .dock-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 14.5px; }
+  .dock-chev { flex: none; width: 18px; height: 18px; color: var(--muted); transform: rotate(90deg); transition: transform .2s; }
+  #in-dock.collapsed .dock-chev { transform: rotate(-90deg); }
+  .dock-body { overflow-y: auto; overscroll-behavior: contain; max-height: min(18vh, 160px); padding: 0 14px 6px; }
+  #in-dock.collapsed .dock-body { display: none; }
+  #in-dock .progress, #in-step .step-num, #in-step > h3 { display: none; }
+  #in-step p { font-size: 14px; line-height: 1.5; margin: 0 0 6px; }
+  /* Что происходит сейчас — не больше двух строк; полный текст — в журнале «Кто что читает по пути» */
+  .dock-hop { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; margin: 0 10px 6px; padding: 5px 10px; border-radius: 8px; background: var(--surface-2); border-left: 3px solid var(--accent); font-size: 13px; line-height: 1.45; color: var(--muted); }
+  .dock-hop[hidden] { display: none; }
+  .dock-ctrl { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--border); }
+  .dock-count { text-align: center; font: 700 15px var(--mono); color: var(--accent); }
+  /* Кнопки шагов отличаются от кнопок экранов внизу: голубая рамка и слово «Шаг» */
+  .dock-step { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, var(--border-2)); }
+  .dock-step:disabled { opacity: .4; }
+  /* Под схемой остаются только «сначала» и скорость: Назад / Авто / Далее — в плашке */
+  #screen-inside #in-controls .controls > .btn:nth-child(n+2) { display: none; }
+  #screen-inside #in-hop { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

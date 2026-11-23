@@ -158,13 +158,13 @@ const LAYER_READERS = [
    4. DNS
    ===================================================================== */
 const DNS = {
-  size: { wide: [1000, 340], tall: [360, 580] },
+  size: { wide: [1000, 340], tall: [360, 510] },
   nodes: {
     you:      { label: 'Твой компьютер', sub: 'кэш ОС', icon: 'laptop', layer: 'app', wide: [90, 170], tall: [180, 50] },
     resolver: { label: 'DNS провайдера', sub: '198.51.100.53', icon: 'book', layer: 'dns', wide: [390, 170], tall: [180, 200] },
     root:     { label: 'Корневой сервер', sub: '«.»', icon: 'globe', layer: 'dns', wide: [710, 60], tall: [60, 360] },
     tld:      { label: 'Сервер зоны .com', sub: 'TLD', icon: 'server', layer: 'dns', wide: [830, 170], tall: [180, 470] },
-    auth:     { label: 'NS anthropic.com', sub: 'авторитетный', icon: 'server', layer: 'dns', wide: [710, 280], tall: [300, 360] },
+    auth:     { label: 'NS anthropic.com', sub: 'авторитетный', icon: 'server', layer: 'dns', wide: [710, 280], tall: [290, 360] },
   },
   links: [
     { from: 'you', to: 'resolver' }, { from: 'resolver', to: 'root' },
@@ -202,7 +202,7 @@ const DNS = {
     size: [460, 200],
     nodes: {
       game:   { label: 'Игра', sub: 'твой ПК', icon: 'game', layer: 'app', wide: [60, 125] },
-      dns:    { label: 'DNS провайдера', sub: '', icon: 'book', layer: 'dns', wide: [230, 45] },
+      dns:    { label: 'DNS провайдера', sub: '', icon: 'book', layer: 'dns', wide: [230, 45], lp: 'right' },
       server: { label: 'Игровой сервер', sub: '203.0.113.42', icon: 'server', layer: 'http', wide: [400, 125] },
     },
     links: [{ from: 'game', to: 'dns' }, { from: 'game', to: 'server' }],
@@ -239,25 +239,25 @@ ping 1.1.1.1`,
 const HW = {
   // Домашняя сеть из общей сети NETWORK: роутер — одна коробка, внутри точка Wi-Fi,
   // коммутатор и маршрутизатор. ПК и принтер — по кабелю, ноутбук и телефон — по Wi-Fi.
-  size: { wide: [1000, 430], tall: [360, 740] },
+  size: { wide: [1000, 480], tall: [360, 635] },
   zones: [
-    { label: 'Дом · LAN 192.168.1.0/24', wide: [15, 15, 590, 400], tall: [6, 6, 348, 450] },
-    { label: 'Домашний роутер — одна коробка', wide: [255, 60, 330, 330], tall: [12, 130, 336, 300] },
+    { label: 'Дом · LAN 192.168.1.0/24', wide: [15, 15, 590, 452], tall: [6, 6, 348, 404] },
+    { label: 'Домашний роутер — одна коробка', tallLabel: 'Роутер — одна коробка', tallLabelBottom: true, wide: [255, 60, 330, 330], tall: [12, 150, 336, 250] },
   ],
   nodes: {
-    pc:      { label: 'ПК', sub: '192.168.1.15', icon: 'laptop', layer: 'app', wide: [80, 90], tall: [48, 60] },
-    printer: { label: 'Принтер', sub: '192.168.1.20', icon: 'printer', layer: 'link', wide: [80, 215], tall: [136, 60] },
-    laptop:  { label: 'Ноутбук', sub: '192.168.1.10', icon: 'laptop', layer: 'app', wide: [80, 340], tall: [224, 60] },
-    phone:   { label: 'Телефон', sub: '192.168.1.30', icon: 'phone', layer: 'app', wide: [200, 395], tall: [312, 60], lp: { wide: 'right' } },
-    switch:  { label: 'Коммутатор', sub: 'порты LAN, MAC-таблица', icon: 'switch', layer: 'link', wide: [340, 150], tall: [95, 220] },
-    ap:      { label: 'Точка Wi-Fi', sub: 'радио 2,4 / 5 ГГц', icon: 'wifi', layer: 'link', wide: [340, 310], tall: [265, 220] },
-    router:  { label: 'Маршрутизатор', sub: '.1 · NAT · 198.51.100.23', icon: 'router', layer: 'ip', wide: [500, 230], tall: [180, 355] },
-    isp:     { label: 'Провайдер', sub: '10.20.0.1', icon: 'building', layer: 'ip', wide: [720, 230], tall: [180, 535] },
-    server:  { label: 'example.com', sub: '203.0.113.80', icon: 'server', layer: 'http', wide: [910, 230], tall: [180, 665] },
+    pc:      { label: 'ПК', sub: '192.168.1.15', icon: 'laptop', layer: 'app', wide: [80, 90], tall: [48, 92], lp: { tall: 'above' } },
+    printer: { label: 'Принтер', sub: '192.168.1.20', icon: 'printer', layer: 'link', wide: [80, 215], tall: [136, 92], lp: { tall: 'above' } },
+    laptop:  { label: 'Ноутбук', sub: '192.168.1.10', icon: 'laptop', layer: 'app', wide: [80, 340], tall: [224, 92], lp: { tall: 'above' } },
+    phone:   { label: 'Телефон', sub: '192.168.1.30', icon: 'phone', layer: 'app', wide: [200, 400], tall: [312, 92], lp: { tall: 'above' } },
+    switch:  { label: 'Коммутатор', sub: 'порты LAN, MAC-таблица', tallSub: 'MAC-таблица', icon: 'switch', layer: 'link', wide: [340, 168], tall: [118, 230], lp: { wide: 'above', tall: 'left' } },
+    ap:      { label: 'Точка Wi-Fi', sub: 'радио 2,4 / 5 ГГц', tallSub: '2,4 / 5 ГГц', icon: 'wifi', layer: 'link', wide: [340, 310], tall: [230, 290], lp: { tall: 'right' } },
+    router:  { label: 'Маршрутизатор', sub: '.1 · NAT · 198.51.100.23', icon: 'router', layer: 'ip', wide: [500, 230], tall: [180, 350], lp: { tall: 'right' } },
+    isp:     { label: 'Провайдер', sub: '10.20.0.1', icon: 'building', layer: 'ip', wide: [720, 230], tall: [180, 495] },
+    server:  { label: 'example.com', sub: '203.0.113.80', icon: 'server', layer: 'http', wide: [910, 230], tall: [180, 595] },
   },
   links: [
-    { from: 'pc', to: 'switch', type: 'eth', label: 'кабель' },
-    { from: 'printer', to: 'switch', type: 'eth', label: 'кабель' },
+    { from: 'pc', to: 'switch', type: 'eth', label: 'кабель', tallLabel: false },
+    { from: 'printer', to: 'switch', type: 'eth', label: 'кабель', tallLabel: false },
     { from: 'laptop', to: 'ap', type: 'wifi' },
     { from: 'phone', to: 'ap', type: 'wifi' },
     { from: 'switch', to: 'ap', layer: 'link' },
@@ -702,14 +702,14 @@ const OSI = {
 
 /* ---------- Адреса: MAC, IP, порты ---------- */
 const ADDR = {
-  size: { wide: [1000, 270], tall: [360, 700] },
-  zones: [{ label: 'Дом · LAN', wide: [20, 30, 440, 225], tall: [10, 10, 340, 290] }],
+  size: { wide: [1000, 270], tall: [360, 520] },
+  zones: [{ label: 'Дом · LAN', wide: [20, 30, 440, 225], tall: [10, 10, 340, 210] }],
   nodes: {
-    laptop: { label: 'Ноутбук', sub: '192.168.1.10', icon: 'laptop', layer: 'app', wide: [110, 140], tall: [180, 75] },
-    router: { label: 'Роутер', sub: '192.168.1.1 / 198.51.100.23', icon: 'router', layer: 'ip', wide: [345, 140], tall: [180, 215] },
-    isp:    { label: 'Провайдер', sub: '10.20.0.1', icon: 'building', layer: 'ip', wide: [575, 140], tall: [180, 365] },
-    inet:   { label: 'Интернет', sub: 'ещё роутеры', icon: 'cloud', layer: 'ip', wide: [755, 140], tall: [180, 500] },
-    server: { label: 'Сервер', sub: '203.0.113.80', icon: 'server', layer: 'http', wide: [920, 140], tall: [180, 640] },
+    laptop: { label: 'Ноутбук', sub: '192.168.1.10', icon: 'laptop', layer: 'app', wide: [110, 140], tall: [180, 70] },
+    router: { label: 'Роутер', sub: '192.168.1.1 · 198.51.100.23', icon: 'router', layer: 'ip', wide: [345, 140], tall: [180, 170] },
+    isp:    { label: 'Провайдер', sub: '10.20.0.1', icon: 'building', layer: 'ip', wide: [575, 140], tall: [180, 280] },
+    inet:   { label: 'Интернет', sub: 'ещё роутеры', icon: 'cloud', layer: 'ip', wide: [755, 140], tall: [180, 380] },
+    server: { label: 'Сервер', sub: '203.0.113.80', icon: 'server', layer: 'http', wide: [920, 140], tall: [180, 480] },
   },
   links: [
     { from: 'laptop', to: 'router', type: 'eth', label: 'кабель / Wi-Fi' },
@@ -810,10 +810,10 @@ const ADDR = {
     lead: 'Дома три устройства, а публичный IP один. Роутер различает их ответы по портам.',
     size: { wide: [590, 245], tall: [360, 400] },
     nodes: {
-      laptop:  { label: 'Ноутбук', sub: '.10', icon: 'laptop', layer: 'app', wide: [120, 40], tall: [60, 45], lp: { wide: 'left' } },
-      phone:   { label: 'Телефон', sub: '.30', icon: 'phone', layer: 'app', wide: [120, 122], tall: [180, 45], lp: { wide: 'left' } },
-      console: { label: 'Приставка', sub: '.40', icon: 'game', layer: 'app', wide: [120, 204], tall: [300, 45], lp: { wide: 'left' } },
-      router:  { label: 'Роутер', sub: '198.51.100.23', icon: 'router', layer: 'ip', wide: [330, 122], tall: [180, 200] },
+      laptop:  { label: 'Ноутбук', sub: '.10', icon: 'laptop', layer: 'app', wide: [120, 40], tall: [60, 80], lp: { wide: 'left', tall: 'above' } },
+      phone:   { label: 'Телефон', sub: '.30', icon: 'phone', layer: 'app', wide: [120, 122], tall: [180, 80], lp: { wide: 'left', tall: 'above' } },
+      console: { label: 'Приставка', sub: '.40', icon: 'game', layer: 'app', wide: [120, 204], tall: [300, 80], lp: { wide: 'left', tall: 'above' } },
+      router:  { label: 'Роутер', sub: '198.51.100.23', icon: 'router', layer: 'ip', wide: [330, 122], tall: [180, 210] },
       server:  { label: 'Сервер', sub: '203.0.113.80', icon: 'server', layer: 'http', wide: [520, 122], tall: [180, 330] },
     },
     links: [
@@ -934,13 +934,13 @@ const WEB = {
       err: 'NET::ERR_CERT_AUTHORITY_INVALID' },
   },
   vpn: {
-    size: { wide: [920, 300], tall: [360, 540] },
+    size: { wide: [920, 300], tall: [360, 510] },
     nodes: {
-      laptop: { label: 'Ты', sub: 'IP 198.51.100.23', icon: 'laptop', layer: 'app', wide: [80, 165], tall: [110, 45] },
-      isp:    { label: 'Провайдер', sub: 'или Wi-Fi в кафе', icon: 'building', layer: 'ip', wide: [300, 165], tall: [110, 185] },
-      ispdns: { label: 'DNS провайдера', icon: 'book', layer: 'dns', wide: [300, 52], tall: [275, 185], lp: { wide: 'right' } },
-      vpn:    { label: 'VPN-сервер', sub: '192.0.2.77', icon: 'lock', layer: 'tls', wide: [565, 250], tall: [275, 335] },
-      site:   { label: 'Сайт', sub: '203.0.113.80', icon: 'server', layer: 'http', wide: [835, 165], tall: [110, 475] },
+      laptop: { label: 'Ты', sub: 'IP 198.51.100.23', icon: 'laptop', layer: 'app', wide: [80, 165], tall: [180, 45] },
+      isp:    { label: 'Провайдер', sub: 'или Wi-Fi в кафе', icon: 'building', layer: 'ip', wide: [300, 165], tall: [180, 185] },
+      ispdns: { label: 'DNS провайдера', icon: 'book', layer: 'dns', wide: [300, 52], tall: [60, 140], lp: { wide: 'right' } },
+      vpn:    { label: 'VPN-сервер', sub: '192.0.2.77', icon: 'lock', layer: 'tls', wide: [565, 250], tall: [60, 330], lp: { tall: 'right' } },
+      site:   { label: 'Сайт', sub: '203.0.113.80', icon: 'server', layer: 'http', wide: [835, 165], tall: [180, 470] },
     },
     links: [
       { id: 'v-lap', from: 'laptop', to: 'isp' },
@@ -1109,7 +1109,7 @@ const DIAG = {
     laptop: { label: 'Твой ПК', icon: 'laptop', layer: 'app', wide: [70, 130], tall: [110, 40] },
     router: { label: 'Роутер', icon: 'router', layer: 'ip', wide: [245, 130], tall: [110, 130] },
     inet:   { label: 'Интернет', icon: 'cloud', layer: 'ip', wide: [430, 130], tall: [110, 220] },
-    dns:    { label: 'DNS', icon: 'book', layer: 'dns', wide: [430, 38], tall: [270, 220], lp: { wide: 'right' } },
+    dns:    { label: 'DNS', icon: 'book', layer: 'dns', wide: [430, 38], tall: [290, 150], lp: { wide: 'right' } },
     fw:     { label: 'Firewall / VPN', icon: 'shield', layer: 'sec', wide: [615, 130], tall: [110, 310] },
     server: { label: 'Сервер сайта', icon: 'server', layer: 'http', wide: [800, 130], tall: [110, 400] },
   },
@@ -2143,10 +2143,12 @@ const INSIDE = {
       request: 'GET /watch?v=abc123 HTTP/2\nHost: www.youtube.com\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/…\nAccept: text/html\nAccept-Language: ru-RU,ru;q=0.9\nCookie: SID=8f2c…; PREF=hl=ru',
       response: 'HTTP/2 200 OK\nContent-Type: video/mp4\nContent-Range: bytes 0-524287/38291456\nCache-Control: private\n\n🔒 … первые секунды видео …',
       video: {
-        cache: { srcName: 'кэш-сервер Google прямо у провайдера (GGC)',
+        cache: { srcName: 'кэш-сервер Google прямо у провайдера (GGC)', server: 'кэш YouTube у провайдера',
+          dnsHint: 'Для YouTube DNS отвечает адресом ближайшей копии видео — кэш-сервера Google прямо в сети твоего провайдера: 198.51.100.80. Поэтому дальше пакеты пойдут только до провайдера.',
           serverWork: 'Кэш-сервер Google в сети провайдера находит видео abc123 у себя — его недавно смотрели соседи — и сразу отдаёт первые секунды. До дата-центра Google запрос даже не доходит.',
           back: 'Ответ идёт коротким путём: от кэш-сервера провайдера через роутер к тебе. Видео — это поток небольших кусков, каждый кусок — пакеты со своими номерами. Поэтому популярные ролики стартуют почти мгновенно.' },
-        dc: { srcName: 'серверы в дата-центре Google',
+        dc: { srcName: 'серверы в дата-центре Google', server: 'дата-центр YouTube',
+          dnsHint: 'Этого видео нет в кэше у провайдера, поэтому DNS отвечает адресом дата-центра YouTube: 203.0.113.50. Пакетам предстоит долгий путь через интернет.',
           serverWork: 'Сервер в дата-центре находит видео abc123, проверяет по cookie, что ты — это ты, и отдаёт его кусками по несколько секунд. Заодно копия может попасть в кэш у провайдера для следующих зрителей.',
           back: 'Ответ идёт тем же путём, но в обратную сторону — через полмира, если дата-центр далеко. Видео — поток кусков, каждый кусок — пакеты со своими номерами. Браузер собирает их и показывает, а следующие куски уже в пути.' },
       },
@@ -2157,7 +2159,7 @@ const INSIDE = {
           ['Cookie: SID=8f2c…', 'http', 'кто именно: ты вошёл в аккаунт'],
           ['TLS 1.3, шифр AES-128-GCM', 'tls', 'всё выше — зашифровано'],
           ['TCP: порт 51234 → 443, до ~1460 байт в пакете', 'tcp', 'нумерация кусков и порт HTTPS'],
-          ['IP: 192.168.1.10 → 203.0.113.50, TTL 64', 'ip', 'адреса отправителя и получателя'],
+          ['IP: 192.168.1.10 → {vip}, TTL 64', 'ip', 'адреса отправителя и получателя ({server})'],
           ['Wi-Fi: MAC 3c:7d:…:66 → a4:2b:…:33', 'link', 'до ближайшего соседа — роутера'],
         ],
         res: [
@@ -2173,7 +2175,8 @@ const INSIDE = {
                  'Это ещё не отправлено, это только текст запроса. Дальше его будут заворачивать в «обёртки» — смотри «Анатомию пакета».'] },
         { kind: 'fork', title: 'Развилка: знаем IP-адрес сервера?', layers: ['core'],
           text: ['Чтобы отправить запрос, нужен не адрес {host}, а IP-адрес из цифр.',
-                 'Если ты уже заходил, адрес лежит в кэше браузера, системы или роутера — DNS пропускается. Если впервые — ноутбук спрашивает DNS-резолвер провайдера.'] },
+                 'Если ты уже заходил, адрес лежит в кэше браузера, системы или роутера — DNS пропускается. Если впервые — ноутбук спрашивает DNS-резолвер провайдера.',
+                 '{dnsHint}'] },
         { kind: 'wrap', title: '«Запираем» запрос: TLS', layers: ['tls', 'core'],
           text: ['Перед отправкой запрос шифруется. Браузер и сервер заранее договорились о ключе (TLS-рукопожатие), и теперь текст превращается в шум.',
                  'Провайдер, Wi-Fi в кафе и все маршрутизаторы по пути увидят только зашифрованные байты.'],
@@ -2438,7 +2441,7 @@ const NETWORK = {
       why: 'Без него браузер знал бы только имя youtube.com, но не знал бы, куда слать пакеты.',
       analogy: 'Справочная в районном отделении почты.',
       reads: 'Читает DNS-вопрос: «какой IP у этого имени?»', does: 'Отвечает из кэша или сам опрашивает корневой сервер, сервер зоны и сервер сайта.' },
-    ggc: { label: 'Кэш видео (GGC)', sub: '198.51.100.80', icon: 'server', layer: 'http', zone: 'isp', term: 'cdn', short: 'Кэш видео',
+    ggc: { label: 'Кэш YouTube', sub: 'у провайдера · 198.51.100.80', icon: 'server', layer: 'http', zone: 'isp', term: 'cdn', short: 'Кэш YouTube',
       title: 'Кэш-сервер видео у провайдера (Google Global Cache)',
       what: 'Сервер Google, который стоит прямо в сети провайдера и хранит копии популярных видео YouTube.',
       why: 'Популярное видео не нужно каждый раз тащить через полмира: YouTube часто отдаёт его прямо из сети провайдера. Быстрее для тебя и дешевле для всех.',
@@ -2484,7 +2487,7 @@ const NETWORK = {
       why: 'Связывает дата-центр с несколькими магистралями сразу, чтобы сервис оставался доступным при аварии на одной из них.',
       analogy: 'Въездные ворота на территорию завода.',
       reads: 'Читает IP-адрес получателя.', does: 'Отправляет пакет внутрь дата-центра, новый кадр.', doll: { change: ['link'] } },
-    ddos: { label: 'Анти-DDoS и firewall', sub: '203.0.113.2', icon: 'shield', layer: 'sec', zone: 'dc', term: 'antiddos', short: 'Анти-DDoS',
+    ddos: { label: 'Анти-DDoS и firewall', tallLabel: 'Анти-DDoS', sub: '203.0.113.2', icon: 'shield', layer: 'sec', zone: 'dc', term: 'antiddos', short: 'Анти-DDoS',
       title: 'Защита от DDoS и firewall',
       what: 'Фильтр на входе дата-центра: отсеивает мусорный трафик атак и пропускает только разрешённые порты.',
       why: 'Без него одна DDoS-атака положила бы сервис, а наружу торчали бы внутренние порты серверов.',
@@ -2532,38 +2535,41 @@ const NETWORK = {
 
   // Раскладки: координаты узлов для широкого экрана (wide) и телефона (tall)
   layout: {
+    /* На телефоне (tall) главный путь — вертикальная колонка, подписи справа от кружков,
+       линия идёт по оси кружков. Боковые узлы (DNS, кэш) — левее, подписи под ними. */
     short: {
-      size: { wide: [1000, 300], tall: [360, 470] },
-      zones: { home: { wide: [15, 110, 320, 180], tall: [8, 4, 344, 186] } },
+      size: { wide: [1000, 300], tall: [360, 425] },
+      zones: { home: { wide: [15, 110, 320, 180], tall: [8, 4, 344, 160] } },
       nodes: {
-        laptop: { wide: [80, 200], tall: [110, 38] }, router: { wide: [250, 200], tall: [110, 133] },
-        isp: { wide: [440, 200], tall: [110, 228] }, dns: { wide: [440, 70], tall: [270, 228], lp: { wide: 'right' } },
-        inet: { wide: [640, 200], tall: [110, 323] }, srv: { wide: [860, 200], tall: [110, 418] },
+        laptop: { wide: [80, 200], tall: [180, 58], lp: { tall: 'right' } }, router: { wide: [250, 200], tall: [180, 122], lp: { tall: 'right' } },
+        isp: { wide: [440, 200], tall: [180, 238], lp: { tall: 'right' } },
+        dns: { wide: [400, 70], tall: [60, 190], lp: { wide: 'left' } }, ggc: { wide: [490, 70], tall: [60, 288], lp: { wide: 'right' } },
+        inet: { wide: [640, 200], tall: [180, 318], lp: { tall: 'right' } }, srv: { wide: [860, 200], tall: [180, 398], lp: { tall: 'right' } },
       },
       links: [
-        ['laptop', 'router', 'wifi'], ['router', 'isp', 'fiber'], ['isp', 'dns', null, 'dns'], ['isp', 'inet', 'fiber'], ['inet', 'srv', 'fiber'],
+        ['laptop', 'router', 'wifi'], ['router', 'isp', 'fiber'], ['isp', 'dns', null, 'dns'], ['isp', 'ggc', null, 'http'], ['isp', 'inet', 'fiber'], ['inet', 'srv', 'fiber'],
       ],
     },
     full: {
-      size: { wide: [1240, 540], tall: [360, 1470] },
+      size: { wide: [1240, 540], tall: [360, 1320] },
       zones: {
-        home: { wide: [10, 30, 280, 490], tall: [6, 6, 348, 290] },
-        isp:  { wide: [300, 30, 250, 490], tall: [6, 306, 348, 300] },
-        inet: { wide: [560, 30, 330, 490], tall: [6, 616, 348, 380] },
-        dc:   { wide: [900, 30, 330, 490], tall: [6, 1006, 348, 456] },
+        home: { wide: [10, 30, 280, 490], tall: [6, 6, 348, 232] },
+        isp:  { wide: [300, 30, 250, 490], tall: [6, 250, 348, 282] },
+        inet: { wide: [560, 30, 330, 490], tall: [6, 548, 348, 352] },
+        dc:   { wide: [900, 30, 330, 490], tall: [6, 912, 348, 400] },
       },
       nodes: {
-        laptop: { wide: [70, 110], tall: [50, 62] }, phone: { wide: [70, 220], tall: [137, 104] },
-        pc: { wide: [70, 330], tall: [223, 62] }, printer: { wide: [70, 440], tall: [310, 104] },
-        router: { wide: [215, 270], tall: [180, 205] },
-        access: { wide: [350, 270], tall: [180, 375] }, isprouter: { wide: [470, 270], tall: [180, 490] },
-        ispdns: { wide: [470, 110], tall: [55, 440] }, ggc: { wide: [470, 430], tall: [305, 440] },
-        ix: { wide: [610, 270], tall: [180, 685] }, pubdns: { wide: [640, 95], tall: [305, 685] },
-        bb1: { wide: [725, 170], tall: [90, 800] }, bb2: { wide: [725, 380], tall: [270, 800] },
-        bb3: { wide: [840, 170], tall: [90, 915] }, bb4: { wide: [840, 380], tall: [270, 915] },
-        border: { wide: [965, 110], tall: [180, 1075] }, ddos: { wide: [965, 255], tall: [180, 1180] },
-        lb: { wide: [965, 400], tall: [180, 1285] },
-        srv1: { wide: [1160, 160], tall: [60, 1395] }, srv2: { wide: [1160, 290], tall: [180, 1395] }, srv3: { wide: [1160, 420], tall: [300, 1395] },
+        laptop: { wide: [70, 110], tall: [48, 92], lp: { tall: 'above' } }, phone: { wide: [70, 220], tall: [136, 92], lp: { tall: 'above' } },
+        pc: { wide: [70, 330], tall: [224, 92], lp: { tall: 'above' } }, printer: { wide: [70, 440], tall: [312, 92], lp: { tall: 'above' } },
+        router: { wide: [215, 270], tall: [190, 200], lp: { tall: 'right' } },
+        access: { wide: [350, 270], tall: [190, 314], lp: { tall: 'right' } }, isprouter: { wide: [470, 270], tall: [190, 404], lp: { tall: 'right' } },
+        ispdns: { wide: [470, 110], tall: [60, 360] }, ggc: { wide: [470, 430], tall: [60, 452] },
+        ix: { wide: [628, 270], tall: [190, 612], lp: { tall: 'right' } }, pubdns: { wide: [640, 95], tall: [60, 612] },
+        bb1: { wide: [725, 170], tall: [190, 684], lp: { tall: 'right' } }, bb2: { wide: [725, 380], tall: [54, 768], lp: { tall: 'right' } },
+        bb3: { wide: [840, 170], tall: [190, 784], lp: { tall: 'right' } }, bb4: { wide: [840, 380], tall: [54, 872], lp: { tall: 'right' } },
+        border: { wide: [985, 110], tall: [190, 975], lp: { tall: 'right' } }, ddos: { wide: [985, 255], tall: [190, 1060], lp: { tall: 'right' } },
+        lb: { wide: [985, 400], tall: [190, 1145], lp: { tall: 'right' } },
+        srv1: { wide: [1160, 160], tall: [70, 1240] }, srv2: { wide: [1160, 290], tall: [190, 1240], lp: { tall: 'below' } }, srv3: { wide: [1160, 420], tall: [310, 1240] },
       },
       links: [
         ['laptop', 'router', 'wifi'], ['phone', 'router', 'wifi'], ['pc', 'router', 'eth'], ['printer', 'router', 'eth'],
@@ -2576,16 +2582,16 @@ const NETWORK = {
     },
     // Только узлы пути до сервера (экран «Потрогай сам»): те же узлы и адреса, что в full
     route: {
-      size: { wide: [1280, 230], tall: [360, 1030] },
+      size: { wide: [1280, 230], tall: [360, 935] },
       zones: {},
       nodes: {
-        laptop: { wide: [55, 150], tall: [110, 40] }, router: { wide: [170, 150], tall: [110, 130] },
-        access: { wide: [285, 150], tall: [110, 220] }, isprouter: { wide: [400, 150], tall: [110, 310] },
-        ispdns: { wide: [400, 45], tall: [270, 310], lp: { wide: 'right' } },
-        ix: { wide: [515, 150], tall: [110, 400] }, bb1: { wide: [630, 150], tall: [110, 490] },
-        bb3: { wide: [745, 150], tall: [110, 580] }, border: { wide: [860, 150], tall: [110, 670] },
-        ddos: { wide: [975, 150], tall: [110, 760] }, lb: { wide: [1090, 150], tall: [110, 850] },
-        srv1: { wide: [1205, 150], tall: [110, 940] },
+        laptop: { wide: [55, 150], tall: [150, 40], lp: { tall: 'right' } }, router: { wide: [170, 150], tall: [150, 125], lp: { tall: 'right' } },
+        access: { wide: [285, 150], tall: [150, 210], lp: { tall: 'right' } }, isprouter: { wide: [400, 150], tall: [150, 295], lp: { tall: 'right' } },
+        ispdns: { wide: [400, 45], tall: [58, 345], lp: { wide: 'right' } },
+        ix: { wide: [515, 150], tall: [150, 400], lp: { tall: 'right' } }, bb1: { wide: [630, 150], tall: [150, 485], lp: { tall: 'right' } },
+        bb3: { wide: [745, 150], tall: [150, 570], lp: { tall: 'right' } }, border: { wide: [860, 150], tall: [150, 655], lp: { tall: 'right' } },
+        ddos: { wide: [975, 150], tall: [150, 740], lp: { tall: 'right' } }, lb: { wide: [1090, 150], tall: [150, 825], lp: { tall: 'right' } },
+        srv1: { wide: [1205, 150], tall: [150, 905], lp: { tall: 'right' } },
       },
       links: [
         ['laptop', 'router', 'wifi'], ['router', 'access', 'fiber'], ['access', 'isprouter', 'fiber'], ['isprouter', 'ispdns', null, 'dns'],
@@ -2597,7 +2603,7 @@ const NETWORK = {
 
   // Маршруты в каждой раскладке
   routes: {
-    short: { toServer: ['laptop', 'router', 'isp', 'inet', 'srv'], toDns: ['laptop', 'router', 'isp', 'dns'], toCache: ['laptop', 'router', 'isp'],
+    short: { toServer: ['laptop', 'router', 'isp', 'inet', 'srv'], toDns: ['laptop', 'router', 'isp', 'dns'], toCache: ['laptop', 'router', 'isp', 'ggc'],
       alt: ['laptop', 'router', 'isp', 'inet', 'srv'] },
     full: { toServer: ['laptop', 'router', 'access', 'isprouter', 'ix', 'bb1', 'bb3', 'border', 'ddos', 'lb', 'srv1'],
       alt: ['laptop', 'router', 'access', 'isprouter', 'ix', 'bb2', 'bb4', 'border', 'ddos', 'lb', 'srv1'],
@@ -2631,7 +2637,8 @@ const NETWORK = {
   ],
   // Фоновые пакеты на карте
   ambient: {
-    short: [{ route: 'toServer', layer: 'ip' }, { route: 'toServer', layer: 'http', back: true }, { route: 'toDns', layer: 'dns' }, { route: 'toDns', layer: 'dns', back: true }],
+    short: [{ route: 'toServer', layer: 'ip' }, { route: 'toServer', layer: 'http', back: true }, { route: 'toDns', layer: 'dns' }, { route: 'toDns', layer: 'dns', back: true },
+      { route: 'toCache', layer: 'http', back: true }],
     full: [{ route: 'toServer', layer: 'ip' }, { route: 'alt', layer: 'http', back: true }, { route: 'toDns', layer: 'dns' }, { route: 'toCache', layer: 'http', back: true },
       { nodes: ['phone', 'router', 'access', 'isprouter', 'ggc'], layer: 'ip' }, { nodes: ['pc', 'router', 'printer'], layer: 'link' }],
   },

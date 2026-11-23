@@ -256,15 +256,19 @@ class Stage {
   render() {
     const [w, hgt] = this.cfg.size[this.layout];
     this.svg.setAttribute('viewBox', `0 0 ${w} ${hgt}`);
+    this.svg.classList.toggle('compact', this.layout === 'tall');
     [this.gZones, this.gLinks, this.gExtra, this.gNodes].forEach(g => put(g));
     this.nodeEls = {}; this.linkEls = {};
 
+    const compact = this.layout === 'tall';
     for (const z of this.cfg.zones || []) {
       const r = z[this.layout];
       if (!r) continue;
+      // Подпись зоны — вверху слева; на телефоне можно задать короче и внизу (если сверху её пересекают линии)
+      const bottom = compact && z.tallLabelBottom;
       this.gZones.append(
         sv('rect', { class: 'zone', x: r[0], y: r[1], width: r[2], height: r[3], rx: 18 }),
-        sv('text', { class: 'zone-label', x: r[0] + 14, y: r[1] + 22, text: z.label }));
+        sv('text', { class: 'zone-label', x: r[0] + 14, y: bottom ? r[1] + r[3] - 10 : r[1] + 22, text: (compact && z.tallLabel) || z.label }));
     }
 
     for (const l of this.cfg.links || []) {
@@ -274,7 +278,7 @@ class Stage {
       const line = sv('line', { class: `link ${l.type || ''}`, x1: a.x, y1: a.y, x2: b.x, y2: b.y, 'data-layer': lineLayer });
       this.gLinks.append(line);
       if (l.id) this.linkEls[l.id] = line;
-      if (l.label) {
+      if (l.label && !(compact && l.tallLabel === false)) {
         const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
         const vertical = Math.abs(b.x - a.x) < Math.abs(b.y - a.y);
         this.gLinks.append(sv('text', vertical
@@ -299,8 +303,13 @@ class Stage {
   renderNode(id) {
     const n = this.nodes[id];
     const p = this.xy(id);
-    const R = n.r || 26;
-    const lp = (n.lp && typeof n.lp === 'object') ? (n.lp[this.layout] || 'below') : (n.lp || 'below');
+    // На телефоне (раскладка tall) узлы и подписи компактнее: кружок ~44 px вместо 52
+    const compact = this.layout === 'tall';
+    const R = Math.round((n.r || 26) * (compact ? 0.85 : 1));
+    let lp = (n.lp && typeof n.lp === 'object') ? (n.lp[this.layout] || 'below') : (n.lp || 'below');
+    // На телефоне подпись под узлом легла бы на вертикальную линию — переносим её вправо, если влезает
+    const explicit = typeof n.lp === 'string' || (n.lp && n.lp[this.layout]);
+    if (compact && !explicit) lp = this.autoSide(id, R) || lp;
     const clickable = !!this.cfg.onNodeClick;
     const g = sv('g', {
       class: 'node' + (clickable ? ' clickable' : ''), 'data-id': id,
@@ -311,14 +320,21 @@ class Stage {
       sv('circle', { class: 'halo', r: R }),
       sv('circle', { class: 'ring', r: R }),
       sv('use', { href: '#ic-' + n.icon, class: 'ic', x: -R * 0.52, y: -R * 0.52, width: R * 1.04, height: R * 1.04 }));
-    let lx = 0, ly = R + 17, anchor = 'middle';
-    if (lp === 'right') { lx = R + 10; ly = -2; anchor = 'start'; }
-    if (lp === 'left') { lx = -R - 10; ly = -2; anchor = 'end'; }
-    g.append(sv('text', { class: 'lbl', x: lx, y: ly, 'text-anchor': anchor, text: n.label }));
-    // Два адреса («192.168.1.1 · 198.51.100.23») под узлом — в две строки, чтобы не налезать на соседей
-    const sub = n.sub ? String(n.sub) : '', cut = sub.lastIndexOf(' · ');
-    const subs = !sub ? [] : (lp === 'below' && sub.length > 18 && cut > 0) ? [sub.slice(0, cut), sub.slice(cut + 3)] : [sub];
-    subs.forEach((s, i) => g.append(sv('text', { class: 'sub', x: lx, y: ly + 15 + i * 13, 'text-anchor': anchor, text: s })));
+    // Подпись: название и адрес. Длинный адрес из двух частей («192.168.1.1 · 198.51.100.23»)
+    // идёт в две строки. Положение считается по числу строк: снизу, сверху, справа или слева от кружка.
+    const sub = String((compact && n.tallSub) || n.sub || ''), cut = sub.lastIndexOf(' · ');
+    const subs = !sub ? [] : (sub.length > 18 && cut > 0) ? [sub.slice(0, cut), sub.slice(cut + 3)] : [sub];
+    const subH = compact ? 12 : 13;   // шаг строк адреса
+    const lblH = compact ? 14 : 15;   // от строки названия до первой строки адреса
+    let lx = 0, ly = R + (compact ? 15 : 17), anchor = 'middle';
+    if (lp === 'above') ly = -R - 8 - (subs.length ? lblH - subH + subs.length * subH : 0);
+    if (lp === 'right' || lp === 'left') {
+      lx = lp === 'right' ? R + 9 : -R - 9;
+      anchor = lp === 'right' ? 'start' : 'end';
+      ly = 4 - (subs.length ? (lblH - subH + subs.length * subH) / 2 : 0);  // блок строк по центру кружка
+    }
+    g.append(sv('text', { class: 'lbl', x: lx, y: ly, 'text-anchor': anchor, text: compact && n.tallLabel ? n.tallLabel : n.label }));
+    subs.forEach((s, i) => g.append(sv('text', { class: 'sub', x: lx, y: ly + lblH + i * subH, 'text-anchor': anchor, text: s })));
 
     if (clickable) {
       g.setAttribute('tabindex', '0');
@@ -329,6 +345,21 @@ class Stage {
     }
     this.nodeEls[id] = g;
     return g;
+  }
+
+  // 'right', если от узла идёт почти вертикальная линия и подпись справа помещается в схему
+  autoSide(id, R) {
+    const p = this.xy(id), n = this.nodes[id];
+    const vertical = (this.cfg.links || []).some(l => {
+      if (l.from !== id && l.to !== id) return false;
+      const o = this.xy(l.from === id ? l.to : l.from);
+      return Math.abs(o.x - p.x) < 0.35 * Math.abs(o.y - p.y);
+    });
+    if (!vertical) return null;
+    const sub = String(n.tallSub || n.sub || ''), cut = sub.lastIndexOf(' · ');
+    const parts = sub.length > 18 && cut > 0 ? [sub.slice(0, cut), sub.slice(cut + 3)] : [sub];
+    const w = Math.max((n.tallLabel || n.label).length * 7.4, ...parts.map(s => s.length * 6.4));
+    return p.x + R + 9 + w <= this.cfg.size.tall[0] - 4 ? 'right' : null;
   }
 
   // Поменять подпись узла на лету (например, «Сервер зоны .net»)
@@ -503,6 +534,15 @@ function initTooltips() {
    Каждая раскладка — свой Stage в своей обёртке; видна только текущая. */
 App.detail = null;  // общая для экранов детализация: на телефоне по умолчанию «Коротко»
 
+// После нажатия переключателя высота блоков меняется. Если сам переключатель уехал
+// под «липкую» шапку или за экран — возвращаем его на виду (отступ задаёт scroll-margin-top).
+function keepVisible(el) {
+  requestAnimationFrame(() => {
+    const top = $('.topbar').offsetHeight, r = el.getBoundingClientRect();
+    if (r.top < top + 4 || r.top > innerHeight - 80) el.scrollIntoView({ block: 'start', behavior: 'auto' });
+  });
+}
+
 function netStageCfg(detail, extra = {}) {
   const L = NETWORK.layout[detail];
   const nodes = {};
@@ -540,10 +580,11 @@ class NetView {
     this.btns = [['short', 'Коротко'], ['full', 'Как на самом деле']].map(([d, label]) => h('button', {
       class: 'btn sm', type: 'button', 'data-detail': d, 'aria-pressed': 'false',
       'data-tip': d === 'short' ? 'Ноутбук, роутер, провайдер, интернет, сервер' : 'Все устройства: узел доступа, точка обмена, магистрали, защита, балансировщик, серверы',
-      onclick: () => { App.detail = d; this.setDetail(d); },
+      onclick: () => { App.detail = d; this.setDetail(d); keepVisible(row); },
     }, label));
     this.markBtns();
-    return h('div', { class: 'btn-row net-toggle', role: 'group', 'aria-label': 'Детализация схемы' }, h('span', { class: 'hint-inline', text: 'Схема:' }), this.btns);
+    const row = h('div', { class: 'btn-row net-toggle', role: 'group', 'aria-label': 'Детализация схемы' }, h('span', { class: 'hint-inline', text: 'Схема:' }), this.btns);
+    return row;
   }
   markBtns() { this.btns?.forEach(b => { const on = b.dataset.detail === this.detail; b.classList.toggle('selected', on); b.setAttribute('aria-pressed', String(on)); }); }
   setDetail(d, silent) {
@@ -1384,7 +1425,7 @@ class Stepper {
     this.o.steps = steps;
     this.makeDots();
   }
-  setAuto(on) { this.auto = on; this.ctrl.setPlaying(on); }
+  setAuto(on) { this.auto = on; this.ctrl.setPlaying(on); this.o.onState?.(); }
   toggle() {
     if (this.auto) { this.setAuto(false); this.o.clock.paused = true; return; }
     this.setAuto(true);
@@ -1414,6 +1455,7 @@ class Stepper {
     this.ctrl.prev.disabled = i === 0;
     this.ctrl.next.disabled = i === steps.length - 1;
     this.o.render(st, i);
+    this.o.onState?.();
     try {
       await clock.wait(0.35);
       await this.o.play(st, i);
@@ -2917,10 +2959,11 @@ const EXTRAS = {
 function buildMobileNav() {
   const bar = $('#bottom-nav');
   App.bn = {
-    prev: h('a', { class: 'bn-btn', href: '#', 'aria-label': 'Предыдущий экран' }, icon('prev'), h('span', { text: 'Назад' })),
+    // Подписи «Экран N»: эти кнопки листают экраны, а шаги анимации — кнопки «Шаг» в плашке
+    prev: h('a', { class: 'bn-btn', href: '#', 'aria-label': 'Предыдущий экран' }, icon('prev'), h('span', { class: 'bn-lbl', text: 'Назад' })),
     menu: h('button', { class: 'bn-btn bn-menu', type: 'button', 'aria-haspopup': 'dialog', 'aria-controls': 'menu-sheet', onclick: () => openMenu() },
       icon('burger'), h('span', { class: 'bn-title' })),
-    next: h('a', { class: 'bn-btn', href: '#', 'aria-label': 'Следующий экран' }, h('span', { text: 'Далее' }), icon('next')),
+    next: h('a', { class: 'bn-btn', href: '#', 'aria-label': 'Следующий экран' }, h('span', { class: 'bn-lbl', text: 'Далее' }), icon('next')),
   };
   bar.append(App.bn.prev, App.bn.menu, App.bn.next);
   const dlg = $('#menu-sheet');
@@ -2955,7 +2998,9 @@ function updateMobileNav(id) {
     a.href = sc ? '#' + sc.id : '#' + id;
     a.classList.toggle('disabled', !sc);
     a.setAttribute('aria-disabled', String(!sc));
-    if (sc) a.setAttribute('aria-label', (a === App.bn.prev ? 'Назад: ' : 'Далее: ') + sc.title);
+    if (sc) a.setAttribute('aria-label', (a === App.bn.prev ? 'Предыдущий экран: ' : 'Следующий экран: ') + sc.title);
+    const n = sc ? screenNum(sc.id) : 0;
+    $('.bn-lbl', a).textContent = !sc ? (a === App.bn.prev ? 'Назад' : 'Далее') : n ? 'Экран ' + n : 'Начало';
   };
   set(App.bn.prev, prev);
   set(App.bn.next, next);
@@ -3290,18 +3335,19 @@ const InsideScreen = {
 
     this.tabBtns = Object.entries(INSIDE.scenarios).map(([id, S]) => h('button', {
       class: 'tab', type: 'button', role: 'tab', 'aria-selected': 'false', 'data-scn': id,
-      style: `--c: var(--l-${id === 'youtube' || id === 'site' ? 'http' : 'api'})`, onclick: () => this.setScenario(id),
+      style: `--c: var(--l-${id === 'youtube' || id === 'site' ? 'http' : 'api'})`, onclick: () => { this.setScenario(id); keepVisible($('#in-tabs')); },
     }, S.tab));
     $('#in-tabs', root).append(...this.tabBtns);
 
     const seg = (label, opts, get, set) => {
-      const btns = opts.map(([v, text]) => h('button', { class: 'btn sm', type: 'button', 'aria-pressed': 'false', onclick: () => { set(v); mark(); } }, text));
+      const btns = opts.map(([v, text]) => h('button', { class: 'btn sm', type: 'button', 'aria-pressed': 'false', onclick: () => { set(v); mark(); keepVisible($('#in-toggles')); } }, text));
       const mark = () => btns.forEach((b, i) => { const on = opts[i][0] === get(); b.classList.toggle('selected', on); b.setAttribute('aria-pressed', String(on)); });
       mark();
       return { el: h('div', { class: 'btn-row', role: 'group', 'aria-label': label }, h('span', { class: 'hint-inline', text: label + ':' }), btns), mark };
     };
     this.dnsSeg = seg('Адрес сервера', [[false, 'Первый раз'], [true, 'Уже заходил']], () => this.cached, v => this.setCached(v));
-    this.videoSeg = seg('Видео из', [['cache', 'кэша провайдера'], ['dc', 'дата-центра']], () => this.video, v => { this.video = v; this.restartStep(); });
+    // Смена варианта сразу перерисовывает схему (кэш или дата-центр), цифры и перезапускает текущий шаг
+    this.videoSeg = seg('Видео из', [['cache', 'кэша провайдера'], ['dc', 'дата-центра']], () => this.video, v => { this.video = v; this.renderExtras(); this.restartStep(); });
     $('#in-toggles', root).append(this.net.toggle(), this.dnsSeg.el, this.videoSeg.el);
 
     this.buildBrowser($('#in-browser', root));
@@ -3310,27 +3356,86 @@ const InsideScreen = {
       progressEl: $('#in-progress', root), controlsEl: $('#in-controls', root),
       render: (st, i) => this.render(st, i),
       play: (st, i) => this.play(st, i),
+      onState: () => this.updateDock(),
     });
     this.stepper.ctrl.play.classList.add('pulse-hint');
     this.stepper.ctrl.play.addEventListener('click', () => this.stepper.ctrl.play.classList.remove('pulse-hint'));
+    this.buildDock(root);
     this.applyScenario();
     this.stepper.show(0);
+  },
+
+  /* --- Плашка шага (телефон): закреплена над нижней навигацией, сворачивается по тапу.
+         Шаги анимации — только здесь («Шаг 3 из 9»), экраны — в нижней панели. --- */
+  buildDock(root) {
+    const panel = $('#in-dock', root);
+    const D = this.dock = {};
+    D.head = h('button', { class: 'dock-head', type: 'button', 'aria-expanded': 'true', 'aria-controls': 'in-dock-body', onclick: () => this.setDockOpen(panel.classList.contains('collapsed')) },
+      D.num = h('span', { class: 'dock-num' }), D.title = h('span', { class: 'dock-title' }), icon('next', 'icon dock-chev'));
+    D.hop = h('div', { class: 'dock-hop', 'aria-live': 'polite', hidden: true });
+    const btn = (cls, label, tip, fn, ...kids) => h('button', { class: 'btn sm ' + cls, type: 'button', 'aria-label': tip, onclick: fn }, kids, label ? h('span', { text: label }) : null);
+    D.prev = btn('dock-step', 'Шаг', 'Предыдущий шаг', () => this.stepper.go(-1), icon('prev'));
+    D.next = h('button', { class: 'btn sm dock-step', type: 'button', 'aria-label': 'Следующий шаг', onclick: () => this.stepper.go(1) }, h('span', { text: 'Шаг' }), icon('next'));
+    D.count = h('span', { class: 'dock-count', 'aria-hidden': 'true' });
+    D.play = h('button', { class: 'btn sm primary dock-play', type: 'button', onclick: () => { this.stepper.ctrl.play.classList.remove('pulse-hint'); this.stepper.toggle(); } });
+    D.ctrl = h('div', { class: 'dock-ctrl', role: 'group', 'aria-label': 'Шаги анимации' }, D.prev, D.count, D.next, D.play);
+    panel.prepend(D.head);
+    panel.append(D.hop, D.ctrl);
+    let open = true;
+    try { open = localStorage.getItem('dock-collapsed') !== '1'; } catch { /* без хранилища — просто развёрнута */ }
+    this.setDockOpen(open, true);
+    // Высота плашки → отступ снизу у страницы, чтобы текст не прятался под ней
+    if ('ResizeObserver' in window) new ResizeObserver(() => syncDockHeight()).observe(panel);
+  },
+  setDockOpen(open, silent) {
+    const panel = $('#in-dock');
+    panel.classList.toggle('collapsed', !open);
+    this.dock.head.setAttribute('aria-expanded', String(open));
+    this.dock.head.setAttribute('aria-label', (open ? 'Свернуть' : 'Развернуть') + ' текст шага');
+    if (!silent) try { localStorage.setItem('dock-collapsed', open ? '0' : '1'); } catch { /* не страшно */ }
+    syncDockHeight();
+  },
+  updateDock() {
+    const D = this.dock;
+    if (!D) return;
+    const s = this.stepper, n = s.o.steps.length, i = s.idx;
+    D.num.textContent = `Шаг ${i + 1} из ${n}`;
+    D.title.textContent = s.o.steps[i].title;
+    D.count.textContent = `${i + 1}/${n}`;
+    D.prev.disabled = i === 0;
+    D.next.disabled = i === n - 1;
+    put(D.play, icon(s.auto ? 'pause' : 'play'), h('span', { text: s.auto ? 'Пауза' : 'Авто' }));
+    D.play.setAttribute('aria-label', s.auto ? 'Пауза автоплея' : 'Автоплей: шаги сами идут один за другим');
+    D.play.classList.toggle('on', s.auto);
+  },
+  // Что происходит сейчас (подпись под схемой и строка в плашке)
+  say(t) {
+    $('#in-hop').textContent = t;
+    if (this.dock) { this.dock.hop.textContent = t; this.dock.hop.hidden = !t; }
   },
 
   S() { return INSIDE.scenarios[this.scn]; },
   vars() {
     const S = this.S();
     const v = S.videoToggle ? S.video[this.video] : {};
-    return { host: S.host, vip: this.dst(), server: S.server, srcName: v.srcName || S.server, serverWork: v.serverWork || '', back: v.back || '' };
+    return { host: S.host, vip: this.dst(), server: v.server || S.server, srcName: v.srcName || S.server, serverWork: v.serverWork || '', back: v.back || '', dnsHint: v.dnsHint || '' };
   },
   buildSteps() {
     const vars = this.vars();
-    return this.S().steps.map(st => ({ ...st, title: tpl(st.title, vars), text: [].concat(st.text).map(t => tpl(t, vars)) }));
+    return this.S().steps.map(st => ({ ...st, title: tpl(st.title, vars), text: [].concat(st.text).map(t => tpl(t, vars)).filter(Boolean) }));
   },
   // Куда идёт запрос: к серверу или (YouTube) к кэшу провайдера
   routeName() { return this.S().videoToggle && this.video === 'cache' ? 'toCache' : 'toServer'; },
   dst() { return this.routeName() === 'toCache' ? '198.51.100.80' : this.S().vip; },
   target() { const r = this.net.route(this.routeName()); return r[r.length - 1]; },
+  // Видео из кэша провайдера: интернет и дата-центр в этом запросе не участвуют — приглушены (узлы и линии)
+  applyDim(extra = []) {
+    const st = this.net.stage;
+    const ids = new Set([...this.net.ids(extra)]);
+    if (this.routeName() === 'toCache') Object.keys(st.nodes).forEach(id => { if (['inet', 'dc'].includes(NETWORK.nodes[id]?.zone)) ids.add(id); });
+    const links = (st.cfg.links || []).filter(l => ids.has(l.from) || ids.has(l.to)).map(l => l.id);
+    st.setMark('dim', [...ids, ...links]);
+  },
 
   applyScenario() {
     const S = this.S();
@@ -3443,13 +3548,14 @@ const InsideScreen = {
   render(st, i) {
     const S = this.S(), steps = this.stepper.o.steps;
     this.net.clearMarks();
+    this.applyDim();
     const dnsId = this.net.id('dns') || 'ispdns';
     const focus = { start: ['laptop'], wrap: ['laptop'], type: ['laptop'], fork: ['laptop', dnsId], cachedns: ['laptop', dnsId],
       handshake: ['laptop', this.target()], path: [], unwrap: [this.target()], back: [this.target(), 'laptop'], render: ['laptop'] }[st.kind] || [];
     this.net.stage.setMark('active', focus);
     this.dollShown = st.layers.filter(k => (steps[i - 1]?.layers || []).includes(k));  // анимировать только новые слои
     this.renderDoll({ layers: st.layers, res: !!st.res, fields: st.fields, coreLayer: st.coreLayer });
-    $('#in-hop').textContent = '';
+    this.say('');
     this.cacheItems = st.cache ? st.cache.map(([what]) => h('li', {}, h('span', { text: what }), h('b', { class: 'pending', text: 'проверяю…' }))) : null;
     put($('#in-step'),
       h('div', { class: 'step-num', text: `Шаг ${i + 1} из ${steps.length}` }),
@@ -3485,9 +3591,11 @@ const InsideScreen = {
     const title = text => h('div', { class: 'payload-title', text });
     const code = (text, lang = 'shell') => h('pre', { class: 'code', html: highlight(text, lang) });
     if (st.kind === 'fork') {
+      // Адрес из DNS — тот, куда пойдут пакеты: у YouTube из кэша это кэш-сервер провайдера
+      const ip = this.dst(), who = this.vars().server;
       return this.cached
-        ? [title('Адрес из кэша'), code(`# Кэш браузера / системы / роутера\n${S.host}  →  ${S.vip}   (хранится ещё 4 мин)\n\n# DNS-запрос не нужен — сразу к серверу`)]
-        : [title('DNS-запрос и ответ (тоже пакеты, UDP, порт 53)'), code(`→ ${S.host}  A ?            (к DNS провайдера 198.51.100.53)\n← ${S.host}  A  ${S.vip}   TTL 300\n\n# Ответ сохраняется в кэш: в следующий раз DNS не понадобится`)];
+        ? [title('Адрес из кэша'), code(`# Кэш браузера / системы / роутера\n${S.host}  →  ${ip}   (${who}, хранится ещё 4 мин)\n\n# DNS-запрос не нужен — сразу к серверу`)]
+        : [title('DNS-запрос и ответ (тоже пакеты, UDP, порт 53)'), code(`→ ${S.host}  A ?            (к DNS провайдера 198.51.100.53)\n← ${S.host}  A  ${ip}   TTL 300   # ${who}\n\n# Ответ сохраняется в кэш: в следующий раз DNS не понадобится`)];
     }
     switch (p.type) {
       case 'letter': return [title('Запрос как письмо'),
@@ -3509,7 +3617,7 @@ const InsideScreen = {
 
   async play(st) {
     const c = this.clock, net = this.net, stg = net.stage, full = net.detail === 'full';
-    const say = t => { $('#in-hop').textContent = t; };
+    const say = t => this.say(t);
     const sp = full ? 380 : 260;
     const route = net.route(this.routeName());
     switch (st.kind) {
@@ -3527,14 +3635,14 @@ const InsideScreen = {
       case 'fork': {
         const toDns = net.route('toDns');
         if (this.cached) {
-          net.mark('dim', ['dns', 'ispdns']);
+          this.applyDim(['dns', 'ispdns']);
           net.mark('good', ['laptop']);
           say(`Короткий путь: адрес ${this.S().host} уже лежит в кэше. DNS-резолвер не нужен.`);
           await stg.fly(['laptop', 'router'], { layer: 'ip', label: 'IP ✓', speed: 160 });
         } else {
           say(`Ноутбук спрашивает DNS-резолвер провайдера: «какой IP у ${this.S().host}?» Вопрос — тоже пакет.`);
           await stg.fly(toDns, { layer: 'dns', label: 'DNS?', speed: sp });
-          say(`DNS отвечает: ${this.S().vip}. Ноутбук запоминает ответ в кэше.`);
+          say(`DNS отвечает: ${this.dst()} — ${this.vars().server}. Ноутбук запоминает ответ в кэше.`);
           await stg.fly([...toDns].reverse(), { layer: 'dns', label: 'IP', speed: sp });
         }
         return;
@@ -3550,7 +3658,7 @@ const InsideScreen = {
         say('В кэшах пусто — спрашиваем DNS-резолвер провайдера.');
         await stg.fly(toDns, { layer: 'dns', label: 'DNS?', speed: sp });
         await stg.fly([...toDns].reverse(), { layer: 'dns', label: 'IP', speed: sp });
-        say('Получен адрес 203.0.113.80.');
+        say(`Получен адрес ${this.dst()}.`);
         return;
       }
       case 'handshake':
@@ -3640,9 +3748,9 @@ const InsideScreen = {
 
   /* --- Блоки под анимацией: «в числах» и ссылка на сравнение браузер ↔ API --- */
   renderExtras() {
-    const S = this.S();
+    const S = this.S(), vars = this.vars();
     const rows = list => h('div', { class: 'num-rows' }, list.map(([codeText, layer, what]) => h('div', { class: 'num-row', 'data-layer': layer },
-      h('code', { text: codeText }), chip(layer, LAYERS[layer].short), h('span', { text: what }))));
+      h('code', { text: tpl(codeText, vars) }), chip(layer, LAYERS[layer].short), h('span', { text: tpl(what, vars) }))));
     put($('#in-numbers'),
       h('div', { class: 'panel' }, h('div', { class: 'small-title', text: 'Запрос: что ушло на сервер' }), rows(S.numbers.req)),
       h('div', { class: 'panel' }, h('div', { class: 'small-title', text: 'Ответ: что пришло обратно' }), rows(S.numbers.res)));
@@ -3701,6 +3809,13 @@ function buildHeadAndFoot(id) {
     next ? h('a', { class: 'btn primary', href: '#' + next.id }, next.title, icon('next')) : h('a', { class: 'btn ghost', href: '#' + SCREENS[0].id }, 'В начало', icon('restart'))));
 }
 
+// Высота плашки шага (телефон, экран «Путь запроса») → --dock-h: на неё увеличивается отступ снизу
+function syncDockHeight() {
+  const panel = $('#in-dock');
+  const on = panel && App.current === 'inside' && matchMedia('(max-width: 760px)').matches;
+  document.documentElement.style.setProperty('--dock-h', on ? panel.offsetHeight + 'px' : '0px');
+}
+
 // Экраны, которые объединены с другими: старые ссылки продолжают работать
 const REDIRECTS = { request: ['inside', 'claude'], url: ['inside', 'site'], layers: ['osi'] };
 function go(id) {
@@ -3734,6 +3849,7 @@ function go(id) {
     TermLinker.run(sec);  // таблетки в статичном и только что созданном тексте, в порядке чтения
   }
   Legend.refresh(id);
+  syncDockHeight();
   const i = SCREENS.findIndex(s => s.id === id);
   document.title = `${SCREENS[i].title} — Как устроен интернет`;
   window.scrollTo(0, 0);
@@ -3756,6 +3872,7 @@ function boot() {
   setTopbarH();
   if ('ResizeObserver' in window) new ResizeObserver(setTopbarH).observe(topbar);
   window.addEventListener('hashchange', () => go(location.hash.slice(1)));
+  matchMedia('(max-width: 760px)').addEventListener?.('change', syncDockHeight);
   go(location.hash.slice(1) || SCREENS[0].id);
 
   /* ГЛАВНЫЙ ЦИКЛ АНИМАЦИИ: один requestAnimationFrame на всё приложение.
